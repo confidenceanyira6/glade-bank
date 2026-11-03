@@ -1,0 +1,45 @@
+/* MyBank-style home, accounts page and bottom nav (matches the reference screenshot) */
+.mb-i{flex:none;display:block}
+.mb{--b1:#0a3fb8;--b2:#0a1f4f;--bl:#0b4fe0;--line:#e4e9f2;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+.mb-hd{display:flex;align-items:center;gap:12px;padding:14px 16px 6px}
+.mb-av{width:42px;height:42px;border-radius:14px;background:var(--navy);color:#fff;display:grid;place-items:center;font-weight:600;font-size:14px;flex:none}
+.mb-hd .g{flex:1;min-width:0}.mb-hd small{display:block;color:var(--mut);font-size:12px}.mb-hd b{font-size:17px;font-weight:600}
+.mb-ib{position:relative;width:40px;height:40px;border-radius:12px;background:#f1f4f9;display:grid;place-items:center;color:var(--navy)}
+.mb-ib[data-n]:after{content:attr(data-n);position:absolute;top:-4px;right:-4px;min-width:16px;height:16px;padding:0 4px;border-radius:99px;background:var(--red);color:#fff;font-size:10px;font-weight:700;display:grid;place-items:center;border:2px solid #fff}
+.mb-bal{background:linear-gradient(135deg,var(--b1) 0%,var(--b2) 100%);color:#fff;border-radius:18px;padding:18px;margin:8px 16px 16px;position:relative;overflow:hidden}
+.mb-bal:after{content:"";position:absolute;right:-40px;top:-40px;width:150px;height:150px;border-radius:50%;background:rgba(255,255,255,.07);pointer-events:none}
+.mb-bal .lab{font-size:12px;opacity:.8;display:flex;align-items:center;gap:8px}
+.mb-bal .lab button{background:none;color:#fff;padding:0;display:grid;place-items:center;opacity:.85}
+.mb-bal b{display:block;font-size:30px;font-weight:700;letter-spacing:-.5px;margin:4px 0 10px}
+.mb-chip{display:inline-block;font-size:11px;background:rgba(255,255,255,.16);padding:3px 10px;border-radius:99px;margin-right:6px}
+.mb-acct{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:10px;background:rgba(255,255,255,.12);border-radius:12px;padding:10px 12px;margin-top:12px}
+.mb-acct small{display:block;font-size:11px;opacity:.75}.mb-acct b{font-size:17px;letter-spacing:1.5px;margin:0;font-weight:600}
+.mb-copy{background:#fff;color:var(--bl);border-radius:9px;padding:7px 11px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:5px;flex:none}
+.mb-tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:0 16px;margin-bottom:16px}
+.mb-tiles button{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 2px 10px;display:flex;flex-direction:column;align-items:center;gap:7px;font-size:11.5px;font-weight:500;color:var(--ink);transition:.15s}
+.mb-tiles button:hover{border-color:#c5d3f5;box-shadow:0 4px 12px rgba(11,79,224,.08)}
+.mb-tiles .c{width:38px;height:38px;border-radius:12px;background:#e8efff;color:var(--bl);display:grid;place-items:center}
+.mb-tiles .c.n{background:#f1f4f9;color:#475467}
+.mb-sec{display:flex;justify-content:space-between;align-items:center;padding:0 16px;margin-bottom:2px}
+.mb-sec b{font-size:15px;font-weight:600}.mb-link{background:none;color:var(--bl);font-weight:600;font-size:13px;padding:0;text-decoration:none}
+.mb-intl{margin:0 16px 14px;border:1px solid var(--line);border-radius:14px;padding:12px;background:#fff}
+.mb-pills{display:flex;gap:8px;overflow-x:auto;padding-top:8px}
+.mb-pill{flex:none;background:#f5f8ff;border:1px solid #d9e4fb;border-radius:12px;padding:8px 12px;font-size:12px;min-width:96px}
+.mb-pill b{display:block;font-size:14px;color:var(--navy)}
+.mb-tx{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.mb-tx .l{width:40px;height:40px;border-radius:12px;background:#e8efff;color:var(--bl);display:grid;place-items:center;font-weight:600;flex:none}
+.mb-tx .g{flex:1;min-width:0}.mb-tx small{display:block;color:var(--mut);font-size:12px}.mb-tx b{font-weight:600;font-size:14px}
+.mb-grow{margin:12px 16px 0;background:linear-gradient(120deg,#0a3fb8,#0f7a3d);color:#fff;border-radius:14px;padding:14px;display:flex;justify-content:space-between;align-items:center}
+.mb-grow button{background:#fff;color:var(--bl);border-radius:10px;padding:8px 12px;font-size:13px;font-weight:600}
+/* accounts page */
+.mb-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid #eef1f6;font-size:13px}
+.mb-row:last-child{border:0}.mb-row span:first-child{color:var(--mut)}.mb-row b{font-weight:600;text-align:right;word-break:break-all}
+.mb-ac{border:1px solid var(--line);border-radius:14px;margin-bottom:10px;background:#fff;overflow:hidden}
+.mb-ac>button.h{width:100%;display:flex;align-items:center;gap:12px;padding:14px;background:none;text-align:left}
+.mb-ac .f{width:42px;height:42px;border-radius:12px;background:#f1f4f9;display:grid;place-items:center;font-size:22px;flex:none}
+.mb-ac .g{flex:1;min-width:0}.mb-ac small{display:block;color:var(--mut);font-size:12px}
+.mb-ac .body{padding:0 14px 14px}
+.mb-ac .rot{transition:.2s;color:var(--mut)}.mb-ac.open .rot{transform:rotate(90deg)}
+/* bottom nav in the same style as the reference */
+.phone .nav button{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;font-weight:500}
+.phone .nav button.on{color:#0b4fe0;font-weight:600}
