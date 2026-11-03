@@ -1,11 +1,16 @@
 import React, { useState } from 'react';
+import MyBankHome from './mybank/MyBankHome.jsx';
+import AdminCards from './cards/AdminCards.jsx';
+import { Icon } from './mybank/icons.jsx';
+import { INTL_ACCOUNTS } from './mybank/accounts.js';
+import './mybank/mybank.css';
 
 // GLADE BANK — UI MOCKUP. Local demo data only. No backend calls.
 const R = { USD: 1, NGN: 1540.25, EUR: 0.92, GBP: 0.79, CAD: 1.36 };
 const FLAG = { 'United States': '🇺🇸', 'United Kingdom': '🇬🇧', Canada: '🇨🇦', Germany: '🇩🇪', Nigeria: '🇳🇬', USD: '🇺🇸', EUR: '🇪🇺', GBP: '🇬🇧', CAD: '🇨🇦', NGN: '🇳🇬' };
 const TX = [['International Transfer', 'To USA · Sep 12, 2025 · 10:24 AM', -500, 'USD', '🇺🇸', 'T'], ['Salary Credit', 'From Employer · Sep 10, 2025', 250000, 'NGN', '💼', 'D'], ['Bill Payment', 'Sep 08, 2025 · 06:20 PM', -12500, 'NGN', '🧾', 'T'], ['Investment', 'Sep 05, 2025 · 11:10 AM', -100000, 'NGN', '📈', 'T']];
 const money = (n, c) => (n < 0 ? '-' : '+') + (c === 'NGN' ? '₦' : '$') + Math.abs(n).toLocaleString();
-const hub = () => { location.hash = '#/hub'; };
+const FROM = ['NGN ••••6789 (Savings)', ...INTL_ACCOUNTS.map(a => a.cur + ' ••••' + a.number.slice(-4))];
 
 const Logo = ({ sub }) => <div className="logo"><svg width="34" height="34" viewBox="0 0 40 40"><circle cx="20" cy="20" r="19" fill="#0f7a3d" /><text x="20" y="28" textAnchor="middle" fontSize="24" fontWeight="800" fill="#fff">G</text></svg><span>GLADE BANK{sub && <small>{sub}</small>}</span></div>;
 const Fld = ({ l, ic, opts, ...p }) => <label className="field"><span>{l}</span><div className="inp">{ic && <i>{ic}</i>}{opts ? <select {...p}>{opts.map(o => <option key={o}>{o}</option>)}</select> : <input {...p} />}</div></label>;
@@ -32,29 +37,21 @@ function Register({ go }) {
     <button className="btn" onClick={() => (s < 3 ? setS(s + 1) : go('home'))}>{s < 3 ? 'Next Step →' : 'Continue →'}</button>{s > 1 && <button className="btn alt" onClick={() => setS(s - 1)}>Back</button>}</div></>;
 }
 
-function Home({ go }) {
-  const [hide, setHide] = useState(false);
-  const A = [['➤', 'Send Money', 'local'], ['⬇', 'Receive', 'receive'], ['◎', 'International Transfer', 'transfer'], ['+', 'More', 'hub']];
-  return <><div className="top"><div style={{ display: 'flex', gap: 10, alignItems: 'center' }}><Logo /><span style={{ fontSize: 13 }}>Welcome back,<br /><b>Confidence 👋</b></span></div><div style={{ display: 'flex', gap: 10, alignItems: 'center' }}><button className="back bell" data-n="3" onClick={() => go('notifs')}>🔔</button><div className="av">👤</div></div></div><div className="pad">
-    <div className="bal"><span className="pill">↑ +12.5%</span><small>Total Balance (demo)</small><b>{hide ? '•••••••' : '₦850,750.25'}</b><small>Available Balance</small><div style={{ fontSize: 20, fontWeight: 700 }}>{hide ? '•••••' : '₦720,600.25'}</div><small>Acct 0123456789 · Savings · Active</small><button className="eye" onClick={() => setHide(!hide)}>{hide ? '🙈' : '👁'}</button></div>
-    <div className="actions">{A.map(a => <button key={a[1]} onClick={() => (a[2] === 'hub' ? hub() : a[2] === 'local' ? (location.hash = '#/local') : go(a[2]))}><div className="ic">{a[0]}</div>{a[1]}</button>)}</div>
-    <div className="promo"><div><b style={{ fontSize: 18 }}>Grow Your Wealth</b><br /><small>with Glade Bank Investments</small><br /><button className="btn sm" style={{ marginTop: 10 }} onClick={() => go('invest')}>Start Investing →</button></div><span>🪙🌱</span></div>
-    <div className="row" style={{ border: 0 }}><b className="g">Recent Transactions</b><a href="#" onClick={e => { e.preventDefault(); go('history'); }}>See All →</a></div>
-    {TX.slice(0, 3).map(t => <div className="row" key={t[0]}><div className="av">{t[4]}</div><span className="g">{t[0]}<small>{t[1]}</small></span><span className={t[2] < 0 ? 'neg' : 'pos'}>{money(t[2], t[3])}</span></div>)}</div></>;
-}
+// Customer home now lives in ./mybank/MyBankHome.jsx (MyBank layout: account number, quick actions, international accounts).
+const HomeScreen = p => <MyBankHome {...p} tx={TX} money={money} />;
 
 function Transfer({ go }) {
-  const [s, setS] = useState(1), [f, setF] = useState({ country: 'United States', cur: 'USD', amt: 500, name: '' });
+  const [s, setS] = useState(1), [f, setF] = useState({ country: 'United States', cur: 'USD', amt: 500, name: '', from: FROM[0] });
   const set = k => e => setF({ ...f, [k]: e.target.value });
   const fee = 15, rate = R.NGN / R[f.cur], get = Math.max(0, f.amt - fee);
   const dyn = { 'United States': ['ABA / Routing number', 'Account number'], 'United Kingdom': ['Sort code', 'Account number'], Germany: ['IBAN', 'SWIFT/BIC'], Canada: ['Institution number', 'Account number'] }[f.country];
   if (s === 5) return <><Top t="Transfer Tracking" go={go} /><div className="pad"><div className="card"><span className="tag w">SIMULATED · Processing</span><h3>{f.amt} {f.cur} to {f.name || 'Recipient'}</h3><p>Ref: GB-DEMO-48213</p><p>Draft → Awaiting payment → <b>Processing</b> → Completed</p><small>No real transfer occurred. Demonstration only.</small></div><button className="btn" onClick={() => go('home')}>Back to Home</button></div></>;
   return <><Top t="International Transfer" go={go} /><div className="pad"><Steps n={s} t={4} />
-    {s === 1 && <><h3 style={{ margin: '0 0 4px', color: 'var(--navy)' }}>Transfer Details</h3><Fld l="Country" ic={FLAG[f.country]} value={f.country} onChange={set('country')} opts={['United States', 'United Kingdom', 'Germany', 'Canada']} /><Fld l="Currency" ic={FLAG[f.cur]} value={f.cur} onChange={set('cur')} opts={['USD', 'GBP', 'EUR', 'CAD']} /><Fld l="Transfer Method" ic="🏦" opts={['Bank Transfer', 'Mobile wallet']} /><Fld l="Amount to send" type="number" value={f.amt} onChange={set('amt')} />
+    {s === 1 && <><h3 style={{ margin: '0 0 4px', color: 'var(--navy)' }}>Transfer Details</h3><Fld l="From account" ic="🏦" value={f.from} onChange={set('from')} opts={FROM} /><a href="#/accounts" style={{ fontSize: 13, fontWeight: 600 }}>View my international accounts →</a><Fld l="Country" ic={FLAG[f.country]} value={f.country} onChange={set('country')} opts={['United States', 'United Kingdom', 'Germany', 'Canada']} /><Fld l="Currency" ic={FLAG[f.cur]} value={f.cur} onChange={set('cur')} opts={['USD', 'GBP', 'EUR', 'CAD']} /><Fld l="Transfer Method" ic="🏦" opts={['Bank Transfer', 'Mobile wallet']} /><Fld l="Amount to send" type="number" value={f.amt} onChange={set('amt')} />
       <div className="card"><div className="kv"><span>Exchange Rate (demo)</span><b>₦{rate.toFixed(2)} / {f.cur}</b></div><div className="kv"><span>Transfer Fee</span><b>{fee.toFixed(2)}</b></div><div className="kv"><span>You Receive</span><b>{get} {f.cur}</b></div><div className="kv"><span>Estimated Delivery</span><b>1-3 Business Days</b></div></div></>}
     {s === 2 && <><h3>Recipient</h3><Fld l="Full name" value={f.name} onChange={set('name')} /><Fld l="Email" /><Fld l="Phone" /><Fld l="Address" /><Fld l="Purpose" opts={['Personal expenses', 'Family support', 'Education', 'Business payment', 'Other']} /></>}
     {s === 3 && <><h3>Bank Details</h3><Fld l="Bank name" />{dyn.map(d => <Fld key={d} l={d} />)}</>}
-    {s === 4 && <><h3>Confirm</h3><div className="card"><div className="kv"><span>To</span><b>{f.name || '—'}</b></div><div className="kv"><span>Country</span><b>{FLAG[f.country]} {f.country}</b></div><div className="kv"><span>Send</span><b>{f.amt} {f.cur}</b></div><div className="kv"><span>Fee</span><b>{fee}</b></div><div className="kv"><span>Recipient gets</span><b>{get} {f.cur}</b></div><span className="tag w">Demo transaction</span></div></>}
+    {s === 4 && <><h3>Confirm</h3><div className="card"><div className="kv"><span>From</span><b>{f.from}</b></div><div className="kv"><span>To</span><b>{f.name || '—'}</b></div><div className="kv"><span>Country</span><b>{FLAG[f.country]} {f.country}</b></div><div className="kv"><span>Send</span><b>{f.amt} {f.cur}</b></div><div className="kv"><span>Fee</span><b>{fee}</b></div><div className="kv"><span>Recipient gets</span><b>{get} {f.cur}</b></div><span className="tag w">Demo transaction</span></div></>}
     <button className="btn" onClick={() => setS(s + 1)}>{s === 4 ? 'Confirm & Submit (demo)' : 'Continue →'}</button>{s > 1 && <button className="btn alt" onClick={() => setS(s - 1)}>Back</button>}</div></>;
 }
 
@@ -99,31 +96,31 @@ function Notifs({ go }) {
 }
 
 function Profile({ go }) {
-  const L = [['👤', 'Personal Information', ''], ['🛡', 'Security Settings', '#/security'], ['🔐', 'Two-Factor Authentication', '#/security', 'Enabled'], ['🔔', 'Notification Preferences', ''], ['💱', 'Currency Preferences', ''], ['✅', 'Verification Status', '#/verify', 'Verified'], ['💬', 'Help & Support', '#/support']];
+  const L = [['👤', 'Personal Information', ''], ['🛡', 'Security Settings', '#/security'], ['🔐', 'Two-Factor Authentication', '#/security', 'Enabled'], ['🔔', 'Notification Preferences', ''], ['💱', 'Currency Preferences', ''], ['✅', 'Verification Status', '#/verify', 'Verified'], ['🗂', 'All Services', '#/hub'], ['💬', 'Help & Support', '#/support']];
   return <><Top t="Profile & Settings" go={go} bell={false} /><div className="pad"><div style={{ textAlign: 'center', margin: '8px 0 14px' }}><div className="av" style={{ width: 84, height: 84, fontSize: 44, margin: '0 auto 8px' }}>👤</div><b>Confidence Anyira</b><br /><small style={{ color: 'var(--mut)' }}>confidence@email.com</small></div>
     {L.map(l => <div className="menu" key={l[1]} onClick={() => (l[2] ? (location.hash = l[2]) : alert(l[1] + ' — screen not built yet'))}><span>{l[0]}</span><span className="g">{l[1]}</span>{l[3] && <span className="tag">{l[3]}</span>}<span>›</span></div>)}<button className="btn alt" style={{ color: 'var(--red)' }} onClick={() => go('welcome')}>Log Out</button></div></>;
 }
 
 function Admin({ go }) {
-  const S = ['Dashboard', 'Customers', 'Accounts', 'Transactions', 'Withdrawals', 'Deposits', 'Investments', 'Compliance', 'Staff', 'Audit Logs', 'Settings'], [s, setS] = useState('Dashboard');
+  const S = ['Dashboard', 'Customers', 'Accounts', 'Transactions', 'Withdrawals', 'Deposits', 'Investments', 'Card Management', 'Compliance', 'Staff', 'Audit Logs', 'Settings'], [s, setS] = useState('Dashboard');
   const pts = [20, 28, 22, 40, 36, 55, 48, 70, 62, 85], path = pts.map((p, i) => (i ? 'L' : 'M') + i * 40 + ',' + (100 - p)).join(' ');
   const rows = ['New customer registered · 2m ago', 'Withdrawal request pending · 5m ago', 'International transfer completed · 10m ago', 'Account verification approved · 12m ago'];
   return <div className="admin"><div className="side"><Logo sub="Admin Console" />{S.map(x => <button key={x} className={s === x ? 'on' : ''} onClick={() => setS(x)}>{x}</button>)}<button onClick={() => go('welcome')}>← Exit</button></div>
     <div className="main"><div className="mtop"><h2>{s === 'Dashboard' ? 'Admin Dashboard' : s}</h2><span>Admin 👤</span></div><div className="demo" style={{ marginBottom: 12 }}>DEMO — mock data only</div>
       {s === 'Dashboard' ? <><div className="stats">{[['👥', '12,540', 'Total Customers'], ['🛡', '11,890', 'Active Accounts'], ['⏳', '238', 'Pending Review'], ['💰', '₦2.5B', 'Total Transactions']].map(x => <div className="card" key={x[2]}><div className="av">{x[0]}</div><div><b>{x[1]}</b><small>{x[2]}</small></div></div>)}</div>
         <div className="two"><div className="card"><b>Recent Activities</b>{rows.map(r => <div className="row" key={r}>• {r}</div>)}</div><div className="card"><b>Transaction Overview</b><svg viewBox="0 0 360 110" width="100%"><path d={path + ' L360,110 L0,110 Z'} fill="#14a04f22" /><path d={path} stroke="#14a04f" strokeWidth="3" fill="none" /></svg><small>Jan Feb Mar Apr May Jun</small></div></div>
-        <div className="card qa"><b>Quick Actions</b><br /><br />{[['Manage Customers', 'Customers'], ['Review Withdrawals', 'Withdrawals'], ['View Transactions', 'Transactions'], ['View Audit Logs', 'Audit Logs']].map(q => <button key={q[0]} onClick={() => setS(q[1])}>{q[0]}</button>)}</div></> :
+        <div className="card qa"><b>Quick Actions</b><br /><br />{[['Manage Customers', 'Customers'], ['Review Withdrawals', 'Withdrawals'], ['View Transactions', 'Transactions'], ['Card Management', 'Card Management'], ['View Audit Logs', 'Audit Logs']].map(q => <button key={q[0]} onClick={() => setS(q[1])}>{q[0]}</button>)}</div></> : s === 'Card Management' ? <AdminCards /> :
         <div className="card"><table><thead><tr><th>Name</th><th>Reference</th><th>Status</th><th>Action</th></tr></thead><tbody>{['Ada Obi', 'John Smith', 'Mary Johnson'].map((n, i) => <tr key={n}><td>{n}</td><td>{s} #{100 + i}</td><td><span className="tag w">Pending</span></td><td><button className="tag" onClick={() => alert('Approve — needs backend permission check')}>Approve</button> <button className="tag w" onClick={() => alert('Reject — reason required (backend)')}>Reject</button></td></tr>)}</tbody></table></div>}
       <p><a href="#/adjust">Balance adjustment tool</a> · <a href="#/audit">Audit log page</a></p></div></div>;
 }
 
-const SCREENS = { home: Home, transfer: Transfer, fx: Fx, benef: Benef, invest: Invest, history: History, receive: Receive, notifs: Notifs, profile: Profile, reg: Register };
+const SCREENS = { home: HomeScreen, transfer: Transfer, fx: Fx, benef: Benef, invest: Invest, history: History, receive: Receive, notifs: Notifs, profile: Profile, reg: Register };
 export default function App() {
   const [v, go] = useState(() => (sessionStorage.getItem('gb') || 'welcome'));
   const nav = (x) => { sessionStorage.setItem('gb', x === 'welcome' || x === 'admin' || x === 'reg' ? 'welcome' : x); go(x); };
   if (v === 'welcome') return <div className="phone"><Welcome go={nav} /></div>;
   if (v === 'admin') return <Admin go={nav} />;
-  const C = SCREENS[v] || Home;
-  const N = [['home', '🏠', 'Home'], ['transfer', '⇄', 'Transfers'], ['invest', '📈', 'Investments'], ['more', '⋯', 'More']];
-  return <div className="phone"><Banner /><C go={nav} />{v !== 'reg' && <div className="nav">{N.map(n => <button key={n[0]} className={v === n[0] ? 'on' : ''} onClick={() => (n[0] === 'more' ? (location.hash = '#/hub') : nav(n[0]))}><i>{n[1]}</i>{n[2]}</button>)}</div>}</div>;
+  const C = SCREENS[v] || HomeScreen;
+  const N = [['home', 'home', 'Home'], ['cards', 'card', 'Cards'], ['history', 'swap', 'Transactions'], ['profile', 'user', 'Profile']];
+  return <div className="phone"><Banner /><C go={nav} />{v !== 'reg' && <div className="nav">{N.map(n => <button key={n[0]} className={v === n[0] ? 'on' : ''} onClick={() => (n[0] === 'cards' ? (location.hash = '#/cards') : nav(n[0]))}><Icon n={n[1]} s={21} /><span>{n[2]}</span></button>)}</div>}</div>;
 }
