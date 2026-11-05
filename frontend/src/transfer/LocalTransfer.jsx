@@ -33,6 +33,7 @@ export default function LocalTransfer() {
     });
   }, []);
 
+  // Name lookup runs once a full 10-digit account number and a bank are chosen.
   useEffect(() => {
     setName('');
     if (acct.length !== 10 || !bank) return;
@@ -41,11 +42,15 @@ export default function LocalTransfer() {
     return () => { clearTimeout(t); setLooking(false); };
   }, [acct, bank]);
 
+  const hint = acct.length === 0 ? '' : acct.length < 10 ? `Account numbers have 10 digits (${acct.length} entered).` : !bank ? 'Select a bank to see the account name.' : '';
+
   const n = Number(amt);
   const total = n + FEE;
   const next = () => {
     setErr('');
-    if (!name) return setErr('Enter a 10-digit account number and choose a bank.');
+    if (acct.length !== 10) return setErr('Enter a 10-digit account number.');
+    if (!bank) return setErr('Select a bank.');
+    if (!name) return setErr('Wait for the account name to load.');
     if (!(n >= 100)) return setErr('Minimum transfer is ₦100.');
     if (bal !== null && total > bal) return setErr('Not enough balance for this transfer and fee.');
     setStep('confirm');
@@ -128,6 +133,7 @@ export default function LocalTransfer() {
         <label className="ot-lab">Recipient account</label>
         <input className="ot-input" inputMode="numeric" maxLength={10} placeholder="Enter 10-digit account number" value={acct} onChange={e => setAcct(e.target.value.replace(/\D/g, ''))} />
         <button className="ot-bank" onClick={() => setSheet(true)}><span>{bank || 'Select bank'}</span><i>›</i></button>
+        {hint && <div className="ot-name">{hint}</div>}
         {looking && <div className="ot-name">Verifying account...</div>}
         {name && <div className="ot-name ok">✓ {name}</div>}
       </div>
@@ -149,7 +155,8 @@ export default function LocalTransfer() {
           <div className="ot-sheet" onClick={e => e.stopPropagation()}>
             <div className="ot-row"><h3>Select bank</h3><button className="ot-x" onClick={() => setSheet(false)}>✕</button></div>
             <input className="ot-input" placeholder="Search bank" value={q} onChange={e => setQ(e.target.value)} />
-            <div className="ot-list">{list.map(b => <button key={b} onClick={() => { setBank(b); setSheet(false); setQ(''); }}><span className="ot-ic">{b[0]}</span>{b}</button>)}</div>
+            <div className="ot-list">{list.map(b => <button key={b} onClick={() => { setBank(b); setSheet(false); setQ(''); }}><span className="ot-ic">{b[0]}</span>{b}</button>)}
+            </div>
           </div>
         </div>
       )}

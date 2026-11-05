@@ -2,5 +2,6 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './AppPlus.jsx';
 import './styles.css';
+import './theme-opay.css';
 
 createRoot(document.getElementById('root')).render(<App />);
