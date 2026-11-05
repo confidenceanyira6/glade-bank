@@ -1,0 +1,22 @@
+.op{--g:#00b876;--gd:#009a63;--ink:#14231c;--mut:#7a8780;--fill:#f4f6f5;--err:#d93025;min-height:100vh;background:#fff;color:var(--ink);font-family:"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;display:flex;justify-content:center;padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
+.op *{box-sizing:border-box}
+.op-card{width:100%;max-width:440px;padding:36px 24px 28px;display:flex;flex-direction:column}
+.op-logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:20px;color:var(--g);margin-bottom:34px}
+.op-logo span{width:36px;height:36px;border-radius:50%;background:var(--g);color:#fff;display:grid;place-items:center;font-weight:900}
+.op h1{margin:0 0 8px;font-size:30px;line-height:1.15;font-weight:800}
+.op-sub{margin:0 0 26px;color:var(--mut);font-size:15px;line-height:1.45}
+.op-field{display:block;margin-bottom:16px}
+.op-field>span{display:block;font-size:13px;color:var(--mut);margin-bottom:6px}
+.op-in{position:relative;display:flex;align-items:center;background:var(--fill);border:1.5px solid transparent;border-radius:12px}
+.op-in:focus-within{border-color:var(--g);background:#fff}
+.op-in input{flex:1;min-width:0;height:52px;border:0;background:transparent;padding:0 14px;font-size:16px;color:var(--ink);outline:none}
+.op-in button{border:0;background:none;color:var(--g);font-weight:700;padding:0 14px;height:52px;cursor:pointer}
+.op-link{display:block;text-align:right;color:var(--g);font-size:14px;font-weight:600;text-decoration:none;margin:-4px 0 6px}
+.op-btn{width:100%;height:54px;margin-top:18px;border:0;border-radius:999px;background:var(--g);color:#fff;font-size:17px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;text-decoration:none}
+.op-btn:hover{background:var(--gd)}
+.op-btn:disabled{opacity:.6;cursor:wait}
+.op-check{display:flex;gap:10px;align-items:flex-start;font-size:14px;color:var(--mut);margin-top:4px}
+.op-check input{width:18px;height:18px;margin-top:1px;accent-color:var(--g)}
+.op-err{color:var(--err);font-size:14px;margin:14px 0 0}
+.op-foot{margin-top:auto;padding-top:28px;text-align:center;color:var(--mut);font-size:14px}
+.op-foot a{color:var(--g);font-weight:700;text-decoration:none}
