@@ -1,0 +1,107 @@
+import React, { useEffect, useState } from 'react';
+import { supabase } from '../auth/supabase.js';
+import { CUR, ORDER, fmt, spaced, loadAccounts } from './common.js';
+import './transfer.css';
+import './wallets.css';
+
+// My Accounts: every currency account has its own account number and can receive money at any time.
+export default function Wallets() {
+  const [user, setUser] = useState(undefined);
+  const [accts, setAccts] = useState([]);
+  const [recv, setRecv] = useState(null);
+  const [copied, setCopied] = useState('');
+  const [sim, setSim] = useState('5000');
+  const [msg, setMsg] = useState('');
+  const [err, setErr] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const load = async () => { const r = await loadAccounts(); setUser(r.user); setAccts(r.accounts); setRecv(cur => (cur ? r.accounts.find(a => a.id === cur.id) || null : null)); };
+  useEffect(() => { load(); }, []);
+
+  const copy = (n) => { navigator.clipboard && navigator.clipboard.writeText(n); setCopied(n); setTimeout(() => setCopied(''), 1500); };
+  const open = async (c) => {
+    setErr(''); setBusy(true);
+    const { error } = await supabase.rpc('open_my_account', { p_currency: c });
+    setBusy(false);
+    if (error) return setErr(error.message);
+    setMsg(`${CUR[c].country} ${c} account opened.`);
+    load();
+  };
+  const simulate = async () => {
+    setErr(''); setBusy(true);
+    const { data, error } = await supabase.rpc('demo_receive_payment', { p_account_number: recv.account_number, p_amount: Number(sim), p_sender: 'John Smith' });
+    setBusy(false);
+    if (error) return setErr(error.message);
+    setMsg(`Received ${fmt(data.amount, data.currency)} from John Smith. New balance ${fmt(data.balance, data.currency)}.`);
+    load();
+  };
+
+  const Head = () => <div className="ot-head"><button onClick={() => { location.hash = '#/'; }} aria-label="Back">←</button><h2>My Accounts</h2><span /></div>;
+
+  if (user === undefined) return <div className="ot"><div className="ot-wrap"><Head /><p className="ot-mut">Loading...</p></div></div>;
+  if (user === null) return <div className="ot"><div className="ot-wrap"><Head /><div className="ot-card"><p>Log in to see your accounts and account numbers.</p><a className="ot-btn" href="#/login">Log in</a></div></div></div>;
+
+  const missing = ORDER.filter(c => !accts.some(a => a.currency === c));
+  const holder = (user.user_metadata && user.user_metadata.full_name) || user.email;
+
+  return (
+    <div className="ot"><div className="ot-wrap">
+      <Head />
+      <p className="ot-mut" style={{ margin: '0 2px 12px' }}>Each account has its own account number. Money sent to any of them lands in that account, anytime.</p>
+      {msg && <div className="wl-toast">{msg}</div>}
+      {err && <p className="ot-err" role="alert">{err}</p>}
+
+      {accts.map(a => (
+        <div className="wl-acct" key={a.id}>
+          <div className="wl-top">
+            <span className="wl-flag">{CUR[a.currency].flag}</span>
+            <div><b>{CUR[a.currency].country} account</b><small>{CUR[a.currency].name} ({a.currency})</small></div>
+            <div className="wl-bal">{fmt(a.balance, a.currency)}</div>
+          </div>
+          <div className="wl-num">
+            <div><small>{a.bank_name} account number</small><b>{spaced(a.account_number)}</b></div>
+            <button className="wl-copy" onClick={() => copy(a.account_number)}>{copied === a.account_number ? 'Copied' : 'Copy'}</button>
+          </div>
+          <div className="wl-acts">
+            <button className="fill" onClick={() => { setRecv(a); setMsg(''); setErr(''); }}>Receive</button>
+            <a href="#/move">Move money</a>
+          </div>
+        </div>
+      ))}
+
+      {accts.length === 0 && <div className="ot-card"><p className="ot-mut">No accounts yet. Open one below.</p></div>}
+
+      {missing.length > 0 && (
+        <>
+          <div className="wl-h">Open another account</div>
+          <div className="ot-chips">{missing.map(c => <button key={c} disabled={busy} onClick={() => open(c)}>{CUR[c].flag} {CUR[c].country} ({c})</button>)}</div>
+        </>
+      )}
+
+      {accts.length > 1 && <a className="ot-btn" href="#/move">Move money between my accounts</a>}
+
+      {recv && (
+        <div className="ot-sheet-bg" onClick={() => setRecv(null)}>
+          <div className="ot-sheet" onClick={e => e.stopPropagation()}>
+            <div className="ot-row"><h3>Receive {recv.currency}</h3><button className="ot-x" onClick={() => setRecv(null)}>✕</button></div>
+            <div className="ot-card" style={{ background: '#f4f6f5' }}>
+              <div className="ot-kv"><span>Account name</span><b>{holder}</b></div>
+              <div className="ot-kv"><span>Bank</span><b>{recv.bank_name}</b></div>
+              <div className="ot-kv"><span>Account number</span><b>{recv.account_number}</b></div>
+              <div className="ot-kv"><span>Currency</span><b>{CUR[recv.currency].flag} {recv.currency}</b></div>
+              <div className="ot-kv"><span>Balance</span><b>{fmt(recv.balance, recv.currency)}</b></div>
+            </div>
+            <button className="ot-btn" onClick={() => copy(recv.account_number)}>{copied === recv.account_number ? 'Copied' : 'Copy account number'}</button>
+            <div className="wl-sim">
+              <p>Demo: simulate someone sending money to this account number.</p>
+              <input className="ot-input" inputMode="decimal" value={sim} onChange={e => setSim(e.target.value.replace(/[^\d.]/g, ''))} placeholder="Amount" />
+              <button className="ot-btn ot-alt" disabled={busy} onClick={simulate}>{busy ? 'Sending...' : `Simulate incoming ${recv.currency}`}</button>
+            </div>
+            {msg && <div className="wl-toast" style={{ marginTop: 12 }}>{msg}</div>}
+            {err && <p className="ot-err">{err}</p>}
+          </div>
+        </div>
+      )}
+    </div></div>
+  );
+}

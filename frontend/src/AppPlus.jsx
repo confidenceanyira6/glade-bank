@@ -2,19 +2,17 @@ import React, { useEffect, useState } from 'react';
 import Base from './App.jsx';
 import { PAGES, HUB } from './Extra.jsx';
 import CustomerCards from './cards/CustomerCards.jsx';
-import Accounts from './mybank/Accounts.jsx';
 import { Login, Signup } from './auth/AuthPages.jsx';
 import Move from './transfer/Move.jsx';
+import Wallets from './transfer/Wallets.jsx';
 import LocalTransfer from './transfer/LocalTransfer.jsx';
 
 // '#/name' opens an extra page; otherwise the main app shows.
-// cards / accounts / intl are the new pages and bring their own bottom nav.
-const OWN_NAV = { cards: CustomerCards, accounts: Accounts, intl: Accounts };
-// OPay-style full-screen pages (Supabase password login, no 2FA; local bank transfer). They take precedence over the old mock pages in Extra.jsx.
-const AUTH = { login: Login, signup: Signup, local: LocalTransfer };
-// Own-account transfer page (#/move), listed first in the All Services hub.
-PAGES.move = Move;
-if (!HUB.some(h => h[0] === 'move')) HUB.unshift(['move', '🔁', 'Move Between My Accounts']);
+const OWN_NAV = { cards: CustomerCards };
+// OPay-style full-screen pages. They take precedence over the old mock pages.
+// accounts / intl = My Accounts (each currency account has its own account number); move = transfer between own accounts.
+const AUTH = { login: Login, signup: Signup, local: LocalTransfer, accounts: Wallets, intl: Wallets, move: Move };
+if (!HUB.some(h => h[0] === 'accounts')) HUB.unshift(['move', '🔁', 'Move Between My Accounts'], ['accounts', '🏦', 'My Accounts']);
 const get = () => (location.hash.startsWith('#/') ? location.hash.slice(2) : '');
 
 // The welcome screen's "Get Started" button used to open the old mock Register form; send it to the real sign-up page.
