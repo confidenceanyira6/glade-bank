@@ -1,0 +1,47 @@
+.ot{--g:#00b876;--gd:#009a63;--ink:#14231c;--mut:#7a8780;--fill:#f4f6f5;--err:#d93025;min-height:100vh;background:#f4f6f5;color:var(--ink);font-family:"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;display:flex;justify-content:center;padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
+.ot *{box-sizing:border-box}
+.ot-wrap{width:100%;max-width:440px;padding:0 16px 28px;display:flex;flex-direction:column}
+.ot-head{display:grid;grid-template-columns:40px 1fr 40px;align-items:center;height:60px}
+.ot-head h2{margin:0;font-size:18px;text-align:center}
+.ot-head button{border:0;background:none;font-size:24px;color:var(--ink);cursor:pointer;text-align:left;padding:0}
+.ot-card{background:#fff;border-radius:16px;padding:16px;margin-bottom:14px}
+.ot-lab{display:block;font-size:13px;color:var(--mut);margin-bottom:8px}
+.ot-input{width:100%;height:50px;border:1.5px solid transparent;background:var(--fill);border-radius:12px;padding:0 14px;font-size:16px;color:var(--ink);outline:none;margin-bottom:10px}
+.ot-input:focus{border-color:var(--g);background:#fff}
+.ot-bank{width:100%;height:50px;border:0;background:var(--fill);border-radius:12px;padding:0 14px;display:flex;justify-content:space-between;align-items:center;font-size:16px;color:var(--ink);cursor:pointer}
+.ot-bank i{font-style:normal;color:var(--mut);font-size:22px}
+.ot-name{margin-top:12px;font-size:14px;color:var(--mut)}
+.ot-name.ok{color:var(--g);font-weight:700;background:#e6f7f0;border-radius:10px;padding:10px 12px}
+.ot-row{display:flex;justify-content:space-between;align-items:center}
+.ot-mut{color:var(--mut);font-size:13px}
+.ot-amt{display:flex;align-items:center;gap:6px;border-bottom:1.5px solid #e3ebe7;padding:6px 0 10px;margin-bottom:12px}
+.ot-amt b{font-size:30px}
+.ot-amt input{flex:1;min-width:0;border:0;outline:0;background:none;font-size:34px;font-weight:700;color:var(--ink)}
+.ot-chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.ot-chips button{border:0;background:#e6f7f0;color:var(--g);font-weight:700;border-radius:999px;padding:8px 14px;font-size:14px;cursor:pointer}
+.ot-btn{width:100%;height:54px;margin-top:6px;border:0;border-radius:999px;background:var(--g);color:#fff;font-size:17px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;text-decoration:none}
+.ot-btn:hover{background:var(--gd)}
+.ot-alt{background:#fff;color:var(--g);border:1.5px solid var(--g)}
+.ot-alt:hover{background:#e6f7f0}
+.ot-err{color:var(--err);font-size:14px;margin:4px 2px 8px}
+.ot-demo{text-align:center;color:var(--mut);font-size:12px;margin:12px 0 0}
+.ot-center{text-align:center;padding:14px 0 10px}
+.ot-center h2{margin:10px 0 6px}
+.ot-big{font-size:36px;font-weight:800}
+.ot-kv{display:flex;justify-content:space-between;gap:12px;padding:9px 0;font-size:15px}
+.ot-kv span{color:var(--mut)}
+.ot-kv b{text-align:right}
+.ot-check{width:72px;height:72px;border-radius:50%;background:var(--g);color:#fff;font-size:38px;display:grid;place-items:center;margin:28px auto 6px}
+.ot-dots{display:flex;gap:16px;justify-content:center;margin:26px 0}
+.ot-dots i{width:16px;height:16px;border-radius:50%;border:2px solid var(--g)}
+.ot-dots i.on{background:var(--g)}
+.ot-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:auto;padding-top:20px}
+.ot-pad button{height:62px;border:0;border-radius:14px;background:#fff;font-size:24px;font-weight:600;color:var(--ink);cursor:pointer}
+.ot-pad button:active{background:#e6f7f0}
+.ot-sheet-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center;z-index:50}
+.ot-sheet{background:#fff;width:100%;max-width:440px;max-height:78vh;border-radius:22px 22px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column}
+.ot-sheet h3{margin:0 0 12px;font-size:18px}
+.ot-x{border:0;background:none;font-size:18px;color:var(--mut);cursor:pointer}
+.ot-list{overflow:auto}
+.ot-list button{width:100%;display:flex;align-items:center;gap:12px;border:0;background:none;padding:12px 4px;font-size:16px;color:var(--ink);text-align:left;cursor:pointer;border-bottom:1px solid #eef2f0}
+.ot-ic{width:36px;height:36px;border-radius:50%;background:#e6f7f0;color:var(--g);display:grid;place-items:center;font-weight:800}

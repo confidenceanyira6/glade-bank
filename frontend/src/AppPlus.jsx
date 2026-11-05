@@ -5,12 +5,13 @@ import CustomerCards from './cards/CustomerCards.jsx';
 import Accounts from './mybank/Accounts.jsx';
 import { Login, Signup } from './auth/AuthPages.jsx';
 import Move from './transfer/Move.jsx';
+import LocalTransfer from './transfer/LocalTransfer.jsx';
 
 // '#/name' opens an extra page; otherwise the main app shows.
 // cards / accounts / intl are the new pages and bring their own bottom nav.
 const OWN_NAV = { cards: CustomerCards, accounts: Accounts, intl: Accounts };
-// OPay-style auth pages (Supabase password login, no 2FA). They take precedence over the old mock Login in Extra.jsx.
-const AUTH = { login: Login, signup: Signup };
+// OPay-style full-screen pages (Supabase password login, no 2FA; local bank transfer). They take precedence over the old mock pages in Extra.jsx.
+const AUTH = { login: Login, signup: Signup, local: LocalTransfer };
 // Own-account transfer page (#/move), listed first in the All Services hub.
 PAGES.move = Move;
 if (!HUB.some(h => h[0] === 'move')) HUB.unshift(['move', '🔁', 'Move Between My Accounts']);
