@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../auth/supabase.js';
 import { CUR, ORDER, loadSettings, saveSettings, DEFAULT_SETTINGS } from '../transfer/common.js';
+import PinChange from './PinChange.jsx';
 import '../transfer/transfer.css';
 import '../transfer/wallets.css';
 import './settings.css';
@@ -100,7 +101,6 @@ export function Security() {
   const u = useAuth();
   const [s, update, smsg, serr] = useSettings(u);
   const [pw, setPw] = useState({ a: '', b: '' });
-  const [pin, setPin] = useState({ a: '', b: '' });
   const [hasPin, setHasPin] = useState(false);
   const [msg, setMsg] = useState(''); const [err, setErr] = useState(''); const [busy, setBusy] = useState('');
   useEffect(() => { if (u) supabase.rpc('has_my_pin').then(({ data }) => setHasPin(!!data)); }, [u]);
@@ -114,16 +114,6 @@ export function Security() {
     setBusy('');
     if (error) return setErr(error.message);
     setPw({ a: '', b: '' }); setMsg('Password changed.');
-  };
-  const savePin = async () => {
-    setErr(''); setMsg('');
-    if (!/^\d{4}$/.test(pin.a)) return setErr('PIN must be exactly 4 digits.');
-    if (pin.a !== pin.b) return setErr('PINs do not match.');
-    setBusy('pin');
-    const { error } = await supabase.rpc('set_my_pin', { p_pin: pin.a });
-    setBusy('');
-    if (error) return setErr(error.message);
-    setPin({ a: '', b: '' }); setHasPin(true); setMsg('Transaction PIN saved.');
   };
   const signOutAll = async () => {
     setBusy('out');
@@ -142,14 +132,7 @@ export function Security() {
         <input className="ot-input" type="password" autoComplete="new-password" value={pw.b} onChange={e => setPw({ ...pw, b: e.target.value })} />
         <button className="ot-btn" disabled={busy === 'pw'} onClick={changePw}>{busy === 'pw' ? 'Updating...' : 'Update password'}</button>
       </div>
-      <div className="ot-card">
-        <div className="ot-row"><b>Transaction PIN</b><span className={'st-tag' + (hasPin ? '' : ' warn')}>{hasPin ? 'Set' : 'Not set'}</span></div>
-        <label className="ot-lab" style={{ marginTop: 10 }}>{hasPin ? 'New 4-digit PIN' : '4-digit PIN'}</label>
-        <input className="ot-input" type="password" inputMode="numeric" maxLength={4} value={pin.a} onChange={e => setPin({ ...pin, a: e.target.value.replace(/\D/g, '') })} />
-        <label className="ot-lab">Confirm PIN</label>
-        <input className="ot-input" type="password" inputMode="numeric" maxLength={4} value={pin.b} onChange={e => setPin({ ...pin, b: e.target.value.replace(/\D/g, '') })} />
-        <button className="ot-btn" disabled={busy === 'pin'} onClick={savePin}>{busy === 'pin' ? 'Saving...' : hasPin ? 'Change PIN' : 'Set PIN'}</button>
-      </div>
+      <PinChange hasPin={hasPin} onChanged={() => setHasPin(true)} />
       <div className="ot-card">
         <div className="st-item"><div className="t"><b>Login alerts</b><small>Get notified when your account is accessed from a new device.</small></div><Switch label="Login alerts" on={s.login_alerts} onChange={v => update({ login_alerts: v })} /></div>
         <div className="st-item" style={{ cursor: 'pointer' }} onClick={() => { location.hash = '#/twofa'; }}><div className="t"><b>Two-factor authentication</b><small>{s.two_factor ? 'On' : 'Off'}</small></div><span>›</span></div>
