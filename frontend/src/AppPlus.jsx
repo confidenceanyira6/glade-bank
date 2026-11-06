@@ -1,21 +1,44 @@
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import Base from './App.jsx';
-import { PAGES } from './Extra.jsx';
-import CustomerCards from './cards/CustomerCards.jsx';
-import { Login, Signup } from './auth/AuthPages.jsx';
-import Move from './transfer/Move.jsx';
-import Exchange from './transfer/Exchange.jsx';
-import Wallets from './transfer/Wallets.jsx';
-import LocalTransfer from './transfer/LocalTransfer.jsx';
-import { Personal, Security, TwoFA, Notify, Currency, Kyc, Services } from './settings/Pages.jsx';
 
-// '#/name' opens an extra page; otherwise the main app shows.
-const OWN_NAV = { cards: CustomerCards };
+// Every extra page is code-split: it downloads only when the user opens it, so the first screen loads fast.
+const pick = (loader, name) => lazy(() => loader().then(m => ({ default: name ? m[name] : m.default })));
+const Login = pick(() => import('./auth/AuthPages.jsx'), 'Login');
+const Signup = pick(() => import('./auth/AuthPages.jsx'), 'Signup');
+const LocalTransfer = pick(() => import('./transfer/LocalTransfer.jsx'));
+const Wallets = pick(() => import('./transfer/Wallets.jsx'));
+const Move = pick(() => import('./transfer/Move.jsx'));
+const Exchange = pick(() => import('./transfer/Exchange.jsx'));
+const Personal = pick(() => import('./settings/Pages.jsx'), 'Personal');
+const Security = pick(() => import('./settings/Pages.jsx'), 'Security');
+const TwoFA = pick(() => import('./settings/Pages.jsx'), 'TwoFA');
+const Notify = pick(() => import('./settings/Pages.jsx'), 'Notify');
+const Currency = pick(() => import('./settings/Pages.jsx'), 'Currency');
+const Kyc = pick(() => import('./settings/Pages.jsx'), 'Kyc');
+const Airtime = pick(() => import('./services/ServicesPages.jsx'), 'Airtime');
+const Data = pick(() => import('./services/ServicesPages.jsx'), 'Data');
+const Betting = pick(() => import('./services/ServicesPages.jsx'), 'Betting');
+const TV = pick(() => import('./services/ServicesPages.jsx'), 'TV');
+const Fixed = pick(() => import('./services/ServicesPages.jsx'), 'FixedPage');
+const Loans = pick(() => import('./services/ServicesPages.jsx'), 'LoanPage');
+const Invite = pick(() => import('./services/ServicesPages.jsx'), 'InvitePage');
+const More = pick(() => import('./services/ServicesPages.jsx'), 'More');
+const Cards = pick(() => import('./cards/CustomerCards.jsx'));
+
 // OPay-style full-screen pages. They take precedence over the old mock pages.
-const AUTH = {
+const NEW = {
   login: Login, signup: Signup, local: LocalTransfer, accounts: Wallets, intl: Wallets, move: Move, exchange: Exchange,
-  personal: Personal, security: Security, twofa: TwoFA, notify: Notify, currency: Currency, kyc: Kyc, verify: Kyc, services: Services, hub: Services,
+  personal: Personal, security: Security, twofa: TwoFA, notify: Notify, currency: Currency, kyc: Kyc, verify: Kyc,
+  airtime: Airtime, data: Data, betting: Betting, tv: TV, fixed: Fixed, loans: Loans, invite: Invite, more: More, services: More, hub: More,
 };
+// Remaining pages that still live in Extra.jsx (loaded on demand, inside the phone frame).
+const OLD = ['bills', 'statements', 'limits', 'support', 'adjust', 'audit', 'forgot'];
+function Old({ k }) {
+  const [P, setP] = useState(null);
+  useEffect(() => { import('./Extra.jsx').then(m => setP(() => m.PAGES[k] || null)); }, [k]);
+  return P ? <P /> : null;
+}
+
 const get = () => (location.hash.startsWith('#/') ? location.hash.slice(2) : '');
 // The old demo Currency Exchange screen lived inside the main app ('fx'); show the real one instead.
 const route = r => (r === '' && sessionStorage.getItem('gb') === 'fx' ? 'exchange' : r);
@@ -36,12 +59,14 @@ const intercept = e => {
   if (to) { e.stopPropagation(); location.hash = '#/' + to; }
 };
 
+const Fallback = () => <div className="boot"><i /></div>;
+
 export default function AppPlus() {
   const [r, setR] = useState(get());
   useEffect(() => { const f = () => { setR(get()); window.scrollTo(0, 0); }; addEventListener('hashchange', f); return () => removeEventListener('hashchange', f); }, []);
   const k = route(r);
-  if (AUTH[k]) { const A = AUTH[k]; return <A />; }
-  const P = OWN_NAV[k] || PAGES[k];
-  if (P) return <div className="phone" style={{ paddingBottom: OWN_NAV[k] ? 90 : 24 }}><div className="demo">DEMO MODE — simulated, no real money moves</div><P /></div>;
+  if (NEW[k]) { const N = NEW[k]; return <Suspense fallback={<Fallback />}><N /></Suspense>; }
+  if (k === 'cards') return <Suspense fallback={<Fallback />}><div className="phone" style={{ paddingBottom: 90 }}><div className="demo">DEMO MODE — simulated, no real money moves</div><Cards /></div></Suspense>;
+  if (OLD.includes(k)) return <div className="phone" style={{ paddingBottom: 24 }}><div className="demo">DEMO MODE — simulated, no real money moves</div><Old k={k} /></div>;
   return <div style={{ display: 'contents' }} onClickCapture={intercept}><Base /></div>;
 }
