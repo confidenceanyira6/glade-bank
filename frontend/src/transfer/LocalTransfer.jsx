@@ -2,91 +2,108 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../auth/supabase.js';
 import './transfer.css';
 
-const BANKS = ['Access Bank', 'GTBank', 'Zenith Bank', 'First Bank', 'UBA', 'OPay', 'Kuda', 'Moniepoint', 'PalmPay', 'Wema Bank', 'Sterling Bank', 'Fidelity Bank', 'Union Bank', 'Stanbic IBTC'];
-const NAMES = ['ADA OBI', 'TUNDE BAKARE', 'CHIOMA EZE', 'MUSA IBRAHIM', 'FATIMA YUSUF', 'EMEKA OKAFOR', 'BOLA ADEYEMI', 'NGOZI NWOSU'];
+const BANKS = ['Glade Bank', 'Access Bank', 'GTBank', 'Zenith Bank', 'First Bank', 'UBA', 'OPay', 'Kuda', 'Moniepoint', 'PalmPay', 'Wema Bank', 'Sterling Bank', 'Fidelity Bank', 'Union Bank', 'Stanbic IBTC'];
 const QUICK = [1000, 2000, 5000, 10000, 20000, 50000];
-const FEE = 10;
 const money = n => '₦' + Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const nameFor = acct => NAMES[[...acct].reduce((s, d) => s + Number(d), 0) % NAMES.length];
 
-// OPay-style "Transfer to Bank Account" (demo: no real money moves).
+// OPay-style "Transfer to Bank Account". Glade Bank accounts are looked up and credited for real;
+// the transaction PIN is checked on the server. Transfers to other banks are still simulated (no bank connection yet).
 export default function LocalTransfer() {
   const [step, setStep] = useState('form'); // form | confirm | pin | done
   const [acct, setAcct] = useState('');
   const [bank, setBank] = useState('');
-  const [name, setName] = useState('');
+  const [found, setFound] = useState(null); // { name, bank } for Glade Bank accounts
+  const [manual, setManual] = useState('');
   const [looking, setLooking] = useState(false);
   const [amt, setAmt] = useState('');
   const [note, setNote] = useState('');
   const [pin, setPin] = useState('');
+  const [pinErr, setPinErr] = useState('');
+  const [busy, setBusy] = useState(false);
   const [sheet, setSheet] = useState(false);
   const [q, setQ] = useState('');
   const [bal, setBal] = useState(null);
   const [err, setErr] = useState('');
-  const [ref] = useState(() => 'GB' + Math.random().toString(36).slice(2, 14).toUpperCase());
+  const [res, setRes] = useState(null);
 
-  useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: s }) => {
-      if (!s.session) return;
-      const { data } = await supabase.from('accounts').select('balance,is_demo').eq('currency', 'NGN').eq('status', 'active');
-      if (data && data.length) setBal(Number((data.find(a => a.is_demo) || data[0]).balance));
-    });
-  }, []);
+  const loadBal = async () => {
+    const { data: s } = await supabase.auth.getSession();
+    if (!s.session) return;
+    const { data } = await supabase.from('accounts').select('balance,is_demo').eq('currency', 'NGN').eq('status', 'active');
+    if (data && data.length) setBal(Number((data.find(a => a.is_demo) || data[0]).balance));
+  };
+  useEffect(() => { loadBal(); }, []);
 
-  // Name lookup runs once a full 10-digit account number and a bank are chosen.
+  // Name enquiry: runs as soon as 10 digits are typed.
   useEffect(() => {
-    setName('');
-    if (acct.length !== 10 || !bank) return;
+    setFound(null);
+    if (acct.length !== 10) return;
+    let live = true;
     setLooking(true);
-    const t = setTimeout(() => { setName(nameFor(acct)); setLooking(false); }, 700);
-    return () => { clearTimeout(t); setLooking(false); };
-  }, [acct, bank]);
+    supabase.rpc('lookup_account', { p_account_number: acct }).then(({ data }) => {
+      if (!live) return;
+      setLooking(false);
+      if (data && data.found) { setFound({ name: data.name, bank: data.bank }); setBank(data.bank); }
+    });
+    return () => { live = false; };
+  }, [acct]);
 
-  const hint = acct.length === 0 ? '' : acct.length < 10 ? `Account numbers have 10 digits (${acct.length} entered).` : !bank ? 'Select a bank to see the account name.' : '';
+  const name = found ? found.name : manual.trim().toUpperCase();
+  const hint = acct.length === 0 ? '' : acct.length < 10 ? `Account numbers have 10 digits (${acct.length} entered).` : '';
+  const unverified = acct.length === 10 && !looking && !found && bank;
 
   const n = Number(amt);
-  const total = n + FEE;
   const next = () => {
     setErr('');
     if (acct.length !== 10) return setErr('Enter a 10-digit account number.');
     if (!bank) return setErr('Select a bank.');
-    if (!name) return setErr('Wait for the account name to load.');
+    if (!name) return setErr(found ? 'Wait for the account name to load.' : 'Enter the account name.');
     if (!(n >= 100)) return setErr('Minimum transfer is ₦100.');
-    if (bal !== null && total > bal) return setErr('Not enough balance for this transfer and fee.');
+    if (bal !== null && n > bal) return setErr('Not enough balance for this transfer.');
     setStep('confirm');
   };
+
+  const submit = async p => {
+    setBusy(true); setPinErr('');
+    const { data, error } = await supabase.rpc('send_local_transfer', { p_bank: bank, p_account_number: acct, p_recipient_name: name, p_amount: n, p_note: note, p_pin: p });
+    setBusy(false);
+    if (error) { setPin(''); return setPinErr(error.message); }
+    if (!data.ok) { setPin(''); return setPinErr(data.error); }
+    setRes(data); setStep('done'); loadBal();
+  };
   const press = d => {
+    if (busy) return;
     if (d === 'del') return setPin(pin.slice(0, -1));
     if (pin.length >= 4) return;
     const p = pin + d;
     setPin(p);
-    if (p.length === 4) setTimeout(() => setStep('done'), 350);
+    if (p.length === 4) submit(p);
   };
   const back = () => {
-    if (step === 'pin') { setPin(''); return setStep('confirm'); }
+    if (step === 'pin') { setPin(''); setPinErr(''); return setStep('confirm'); }
     if (step === 'confirm') return setStep('form');
-    location.hash = '#/hub';
+    location.hash = '#/services';
   };
 
   const Head = ({ t }) => <div className="ot-head"><button onClick={back} aria-label="Back">←</button><h2>{t}</h2><span /></div>;
 
-  if (step === 'done') {
+  if (step === 'done' && res) {
     return (
       <div className="ot"><div className="ot-wrap ot-center">
         <div className="ot-check">✓</div>
         <h2>Transfer successful</h2>
-        <div className="ot-big">{money(n)}</div>
-        <p className="ot-mut">sent to {name}</p>
+        <div className="ot-big">{money(res.amount)}</div>
+        <p className="ot-mut">sent to {res.name}</p>
         <div className="ot-card">
           <div className="ot-kv"><span>Bank</span><b>{bank}</b></div>
           <div className="ot-kv"><span>Account number</span><b>{acct}</b></div>
-          <div className="ot-kv"><span>Fee</span><b>{money(FEE)}</b></div>
           {note && <div className="ot-kv"><span>Remark</span><b>{note}</b></div>}
-          <div className="ot-kv"><span>Reference</span><b>{ref}</b></div>
+          <div className="ot-kv"><span>Reference</span><b>{res.reference}</b></div>
+          <div className="ot-kv"><span>New balance</span><b>{money(res.balance)}</b></div>
         </div>
-        <p className="ot-demo">Demo only. No real money moved.</p>
+        {res.kind === 'external_demo' && <p className="ot-demo">Demo: transfers to other banks are simulated. The money left your account but nothing was sent to a real bank.</p>}
         <a className="ot-btn" href="#/">Done</a>
-        <button className="ot-btn ot-alt" onClick={() => { setStep('form'); setAmt(''); setNote(''); setPin(''); setAcct(''); setBank(''); }}>Make another transfer</button>
+        <button className="ot-btn ot-alt" onClick={() => { setStep('form'); setAmt(''); setNote(''); setPin(''); setAcct(''); setBank(''); setManual(''); setRes(null); }}>Make another transfer</button>
       </div></div>
     );
   }
@@ -99,6 +116,8 @@ export default function LocalTransfer() {
           <div className="ot-big">{money(n)}</div>
           <p className="ot-mut">to {name}</p>
           <div className="ot-dots">{[0, 1, 2, 3].map(i => <i key={i} className={i < pin.length ? 'on' : ''} />)}</div>
+          {busy && <p className="ot-mut">Sending...</p>}
+          {pinErr && <p className="ot-err" role="alert">{pinErr}{/PIN in Security/.test(pinErr) && <> <a href="#/security" style={{ color: 'var(--g)', fontWeight: 700 }}>Set PIN</a></>}</p>}
         </div>
         <div className="ot-pad">
           {['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'del'].map((k, i) => k === '' ? <span key={i} /> : <button key={i} onClick={() => press(k)}>{k === 'del' ? '⌫' : k}</button>)}
@@ -116,8 +135,7 @@ export default function LocalTransfer() {
           <div className="ot-kv"><span>Recipient</span><b>{name}</b></div>
           <div className="ot-kv"><span>Account number</span><b>{acct}</b></div>
           <div className="ot-kv"><span>Bank</span><b>{bank}</b></div>
-          <div className="ot-kv"><span>Fee</span><b>{money(FEE)}</b></div>
-          <div className="ot-kv"><span>Amount to debit</span><b>{money(total)}</b></div>
+          <div className="ot-kv"><span>Fee</span><b>Free</b></div>
           {note && <div className="ot-kv"><span>Remark</span><b>{note}</b></div>}
         </div>
         <button className="ot-btn" onClick={() => setStep('pin')}>Confirm</button>
@@ -135,7 +153,11 @@ export default function LocalTransfer() {
         <button className="ot-bank" onClick={() => setSheet(true)}><span>{bank || 'Select bank'}</span><i>›</i></button>
         {hint && <div className="ot-name">{hint}</div>}
         {looking && <div className="ot-name">Verifying account...</div>}
-        {name && <div className="ot-name ok">✓ {name}</div>}
+        {found && <div className="ot-name ok">✓ {found.name}</div>}
+        {unverified && <>
+          <div className="ot-name">We can't verify accounts at other banks yet. Enter the account name to continue.</div>
+          <input className="ot-input" style={{ marginTop: 10 }} placeholder="Account name" value={manual} onChange={e => setManual(e.target.value)} />
+        </>}
       </div>
 
       <div className="ot-card">
@@ -143,12 +165,10 @@ export default function LocalTransfer() {
         <div className="ot-amt"><b>₦</b><input inputMode="decimal" placeholder="0.00" value={amt} onChange={e => setAmt(e.target.value.replace(/[^\d.]/g, ''))} /></div>
         <div className="ot-chips">{QUICK.map(v => <button key={v} onClick={() => setAmt(String(v))}>₦{v.toLocaleString()}</button>)}</div>
         <input className="ot-input" placeholder="Add a remark (optional)" maxLength={40} value={note} onChange={e => setNote(e.target.value)} />
-        <p className="ot-mut" style={{ margin: '10px 0 0' }}>Transfer fee: {money(FEE)}</p>
       </div>
 
       {err && <p className="ot-err" role="alert">{err}</p>}
       <button className="ot-btn" onClick={next}>Next</button>
-      <p className="ot-demo">Demo environment. No real money moves.</p>
 
       {sheet && (
         <div className="ot-sheet-bg" onClick={() => setSheet(false)}>

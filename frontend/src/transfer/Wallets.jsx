@@ -4,6 +4,9 @@ import { CUR, ORDER, fmt, spaced, loadAccounts } from './common.js';
 import './transfer.css';
 import './wallets.css';
 
+const REGION = { africa: 'Africa', europe: 'Europe', americas: 'the Americas', asia: 'Asia', oceania: 'Oceania', default: 'your region' };
+const when = d => new Date(d).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+
 // My Accounts: every currency account has its own account number and can receive money at any time.
 export default function Wallets() {
   const [user, setUser] = useState(undefined);
@@ -14,9 +17,10 @@ export default function Wallets() {
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
+  const [fee, setFee] = useState(null);
 
   const load = async () => { const r = await loadAccounts(); setUser(r.user); setAccts(r.accounts); setRecv(cur => (cur ? r.accounts.find(a => a.id === cur.id) || null : null)); };
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); supabase.rpc('my_fee_info').then(({ data }) => setFee(data || null)); }, []);
 
   const copy = (n) => { navigator.clipboard && navigator.clipboard.writeText(n); setCopied(n); setTimeout(() => setCopied(''), 1500); };
   const open = async (c) => {
@@ -43,6 +47,7 @@ export default function Wallets() {
 
   const missing = ORDER.filter(c => !accts.some(a => a.currency === c));
   const holder = (user.user_metadata && user.user_metadata.full_name) || user.email;
+  const f = fee && fee.fee;
 
   return (
     <div className="ot"><div className="ot-wrap">
@@ -70,6 +75,16 @@ export default function Wallets() {
       ))}
 
       {accts.length === 0 && <div className="ot-card"><p className="ot-mut">No accounts yet. Open one below.</p></div>}
+
+      {f && f.amount != null && (
+        <div className="ot-card">
+          <div className="ot-row"><b>Monthly account fee</b><b>{fmt(f.amount, f.currency)}</b></div>
+          <p className="ot-mut" style={{ margin: '6px 0 0', fontSize: 13 }}>
+            Charged on the 1st of each month to your main account ({f.currency}). Based on {REGION[f.region] || 'your region'}: {Number(f.base_amount)} {f.base_currency}, converted to your account currency. Next charge: {when(fee.next_charge)}.
+            {fee.last_period && <> Last charged: {fee.last_period} ({fmt(fee.last_amount, fee.last_currency)}).</>}
+          </p>
+        </div>
+      )}
 
       {missing.length > 0 && (
         <>
