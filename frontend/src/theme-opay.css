@@ -1,8 +1,11 @@
-/* OPay-style theme: green + white, rounded, flat. Loaded last so it restyles every page. */
-:root{--navy:#14231c;--green:#00b876;--g2:#00b876;--grey:#f4f6f5;--ink:#14231c;--mut:#7a8780;--red:#d93025}
+/* OPay-style theme in EMERALD green (#10b981 / #059669). Loaded last so it restyles every page. */
+:root{--navy:#14231c;--green:#10b981;--g2:#10b981;--grey:#f4f6f5;--ink:#14231c;--mut:#7a8780;--red:#d93025}
 body{background:#f4f6f5;font-family:"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;color:var(--ink)}
+body a{color:#059669}
 body .phone{background:#f4f6f5;box-shadow:none}
-body .demo{background:#e6f7f0;color:#007a4e}
+body .demo{background:#d1fae5;color:#047857}
+body .logo small{color:#059669}
+svg circle[fill="#0f7a3d"]{fill:#10b981}
 
 /* header */
 body .top{background:#fff;padding:14px 16px;margin-bottom:14px;position:sticky;top:0;z-index:4}
@@ -12,57 +15,70 @@ body .back{color:var(--ink);font-size:24px}
 /* cards, lists */
 body .card{box-shadow:none;border:0;border-radius:16px}
 body .row,body .menu{background:#fff;padding:14px;border-bottom:1px solid #eef2f0}
-body .av{background:#e6f7f0}
-body .tag{background:#e6f7f0;color:#009a63}
+body .av{background:#d1fae5}
+body .tag{background:#d1fae5;color:#047857}
 body .tag.w{background:#fff4dc;color:#9a6a00}
-body .ic{background:var(--green)}
+body .ic{background:#10b981}
 
 /* buttons */
-body .btn{background:var(--green);box-shadow:none;border-radius:999px;height:54px;padding:0;font-size:17px;display:flex;align-items:center;justify-content:center}
-body .btn:hover{background:#009a63}
+body .btn{background:#10b981;box-shadow:none;border-radius:999px;height:54px;padding:0;font-size:17px;display:flex;align-items:center;justify-content:center}
+body .btn:hover{background:#059669}
 body .btn:disabled{opacity:.5}
-body .btn.alt{background:#fff;color:var(--green);border:1.5px solid var(--green)}
+body .btn.alt{background:#fff;color:#059669;border:1.5px solid #10b981}
 body .btn.sm{height:auto;padding:8px 16px;font-size:13px;display:inline-block}
 
 /* form fields */
 body .field{display:block;margin:12px 0}
 body .field>span{display:block;font-size:13px;color:var(--mut);margin-bottom:6px}
 body .field>input,body .field>select{display:block;width:100%;height:50px;border:1.5px solid #e3ebe7;border-radius:12px;background:#fff;padding:0 14px;font-size:16px;color:var(--ink);outline:0}
-body .field>input:focus,body .field>select:focus,body .inp:focus-within{border-color:var(--green)}
+body .field>input:focus,body .field>select:focus,body .inp:focus-within{border-color:#10b981}
 body .inp{border:1.5px solid #e3ebe7;border-radius:12px;padding:0 14px;margin-top:0}
 body .inp input,body .inp select{padding:0;height:48px;font-size:16px}
 
 /* tabs, steps, nav */
 body .tabs{background:#fff;border-radius:999px;padding:4px}
 body .tabs button{border-radius:999px;color:var(--mut);font-weight:600}
-body .tabs .on{background:var(--green);color:#fff;box-shadow:none}
-body .nav button.on,body .phone .nav button.on{color:var(--green)}
-body .up{background:#fff;border-color:#b8e6d3}
+body .tabs .on{background:#10b981;color:#fff;box-shadow:none}
+body .nav button.on,body .phone .nav button.on{color:#10b981}
+body .up{background:#fff;border-color:#6ee7b7}
 
 /* hero surfaces */
-body .bal,body .mb-bal{background:linear-gradient(150deg,#00b876,#008f5d)}
+body .bal,body .mb-bal{background:linear-gradient(150deg,#10b981,#047857)}
 body .pill{background:rgba(255,255,255,.22)}
-body .promo,body .mb-grow{background:linear-gradient(120deg,#00b876,#008f5d)}
-body .welcome{background:linear-gradient(170deg,#00b876,#008f5d)}
+body .promo,body .mb-grow{background:linear-gradient(120deg,#10b981,#047857)}
+body .welcome{background:linear-gradient(170deg,#10b981,#047857)}
 body .welcome .top{background:none;position:static;padding:0;margin:0}
-body .welcome .btn{background:#fff;color:var(--green)}
-body .vcard{background:linear-gradient(135deg,#00b876,#006b46)}
-body .fab{background:var(--green);box-shadow:0 4px 14px #00b87655}
+body .welcome .btn{background:#fff;color:#059669}
+body .vcard{background:linear-gradient(135deg,#10b981,#065f46)}
+body .fab{background:#10b981;box-shadow:0 4px 14px #10b98155}
 
 /* home (MyBank) */
-body .mb{--b1:#00b876;--b2:#008f5d;--bl:#00b876}
-body .mb-tiles .c,body .mb-tx .l{background:#e6f7f0}
+body .mb{--b1:#10b981;--b2:#047857;--bl:#10b981}
+body .mb-tiles .c,body .mb-tx .l{background:#d1fae5}
 body .mb-tiles button{border:0}
-body .mb-pill{background:#f0faf6;border-color:#cdeee0}
+body .mb-pill{background:#ecfdf5;border-color:#a7f3d0}
 body .mb-av{background:var(--ink)}
 body .mb-ac,body .mb-intl{border:0}
 
 /* extra pages */
 body .hub a{background:#fff;color:var(--ink)}
 body .otp input{border-radius:12px;border:1.5px solid #e3ebe7}
-body .sw.on{background:var(--green)}
-body .bar i{background:var(--green)}
+body .sw.on{background:#10b981}
+body .bar i{background:#10b981}
 
 /* admin */
-body .side{background:linear-gradient(180deg,#0e2a21,#0a1f18)}
-body .qa button{background:#e6f7f0;color:#007a4e}
+body .side{background:linear-gradient(180deg,#064e3b,#022c22)}
+body .side .on{background:#10b981}
+body .qa button{background:#d1fae5;color:#047857}
+body svg path[stroke="#14a04f"]{stroke:#10b981}
+body svg path[fill="#14a04f22"]{fill:#10b98122}
+
+/* OPay-style pages (transfer, accounts, settings, auth): emerald */
+body .ot,body .op{--g:#10b981;--gd:#059669}
+body .ot-name.ok{background:#d1fae5;color:#047857}
+body .ot-chips button,body .ot-ic,body .ot-alt:hover,body .ot-pad button:active{background:#d1fae5}
+body .ot-chips button{color:#047857}
+body .wl-flag,body .wl-toast{background:#d1fae5}
+body .wl-toast{color:#047857}
+body .wl-acct.sel{background:#ecfdf5}
+body .st-av,body .st-tag,body .st-toast,body .st-grid i{background:#d1fae5}

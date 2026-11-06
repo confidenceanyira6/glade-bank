@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Icon } from './icons.jsx';
 import { ACCOUNT, INTL_ACCOUNTS, fmtMoney } from './accounts.js';
-import { CUR, loadAccounts } from '../transfer/common.js';
+import { CUR, loadAccounts, loadSettings } from '../transfer/common.js';
 import './mybank.css';
 
 const greet = () => { const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'; };
@@ -13,9 +13,14 @@ export default function MyBankHome({ go, tx = [], money = (n) => n }) {
   const [hide, setHide] = useState(false);
   const [copied, setCopied] = useState(false);
   const [real, setReal] = useState(null);
-  useEffect(() => { loadAccounts().then(r => { if (r.user && r.accounts.length) setReal(r); }); }, []);
+  const [base, setBase] = useState('NGN');
+  useEffect(() => {
+    loadAccounts().then(r => { if (r.user && r.accounts.length) setReal(r); });
+    loadSettings().then(s => { if (s) setBase(s.base_currency); });
+  }, []);
 
-  const main = real ? (real.accounts.find(a => a.currency === 'NGN') || real.accounts[0]) : null;
+  // The main account is the one in the user's chosen main currency (Profile > Currency Preferences).
+  const main = real ? (real.accounts.find(a => a.currency === base) || real.accounts.find(a => a.currency === 'NGN') || real.accounts[0]) : null;
   const others = real ? real.accounts.filter(a => a !== main) : [];
   const number = main ? main.account_number : ACCOUNT.number;
   const full = real && real.user.user_metadata && real.user.user_metadata.full_name;

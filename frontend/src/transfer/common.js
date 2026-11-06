@@ -21,3 +21,20 @@ export async function loadAccounts() {
   const accounts = Object.values(m).sort((a, b) => ORDER.indexOf(a.currency) - ORDER.indexOf(b.currency));
   return { user: s.session.user, accounts };
 }
+
+// Per-user settings (notifications, main currency, 2FA preference, login alerts).
+export const DEFAULT_SETTINGS = {
+  notify: { transactions: true, security: true, promotions: false, updates: true, email: true, push: true },
+  base_currency: 'NGN', two_factor: false, two_factor_method: 'authenticator', login_alerts: true,
+};
+export async function loadSettings() {
+  const { data: s } = await supabase.auth.getSession();
+  if (!s.session) return null;
+  const { data } = await supabase.from('user_settings').select('*').eq('user_id', s.session.user.id).maybeSingle();
+  return { ...DEFAULT_SETTINGS, ...(data || {}), notify: { ...DEFAULT_SETTINGS.notify, ...((data && data.notify) || {}) } };
+}
+export async function saveSettings(patch) {
+  const { data: s } = await supabase.auth.getSession();
+  if (!s.session) return { error: { message: 'Please log in first.' } };
+  return supabase.from('user_settings').upsert({ user_id: s.session.user.id, ...patch, updated_at: new Date().toISOString() });
+}
