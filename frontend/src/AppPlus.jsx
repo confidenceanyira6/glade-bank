@@ -4,6 +4,7 @@ import { PAGES } from './Extra.jsx';
 import CustomerCards from './cards/CustomerCards.jsx';
 import { Login, Signup } from './auth/AuthPages.jsx';
 import Move from './transfer/Move.jsx';
+import Exchange from './transfer/Exchange.jsx';
 import Wallets from './transfer/Wallets.jsx';
 import LocalTransfer from './transfer/LocalTransfer.jsx';
 import { Personal, Security, TwoFA, Notify, Currency, Kyc, Services } from './settings/Pages.jsx';
@@ -12,10 +13,12 @@ import { Personal, Security, TwoFA, Notify, Currency, Kyc, Services } from './se
 const OWN_NAV = { cards: CustomerCards };
 // OPay-style full-screen pages. They take precedence over the old mock pages.
 const AUTH = {
-  login: Login, signup: Signup, local: LocalTransfer, accounts: Wallets, intl: Wallets, move: Move,
+  login: Login, signup: Signup, local: LocalTransfer, accounts: Wallets, intl: Wallets, move: Move, exchange: Exchange,
   personal: Personal, security: Security, twofa: TwoFA, notify: Notify, currency: Currency, kyc: Kyc, verify: Kyc, services: Services, hub: Services,
 };
 const get = () => (location.hash.startsWith('#/') ? location.hash.slice(2) : '');
+// The old demo Currency Exchange screen lived inside the main app ('fx'); show the real one instead.
+const route = r => (r === '' && sessionStorage.getItem('gb') === 'fx' ? 'exchange' : r);
 
 // Profile menu rows -> their pages (the Base app's rows only had placeholders).
 const MENU = {
@@ -36,8 +39,9 @@ const intercept = e => {
 export default function AppPlus() {
   const [r, setR] = useState(get());
   useEffect(() => { const f = () => { setR(get()); window.scrollTo(0, 0); }; addEventListener('hashchange', f); return () => removeEventListener('hashchange', f); }, []);
-  if (AUTH[r]) { const A = AUTH[r]; return <A />; }
-  const P = OWN_NAV[r] || PAGES[r];
-  if (P) return <div className="phone" style={{ paddingBottom: OWN_NAV[r] ? 90 : 24 }}><div className="demo">DEMO MODE — simulated, no real money moves</div><P /></div>;
+  const k = route(r);
+  if (AUTH[k]) { const A = AUTH[k]; return <A />; }
+  const P = OWN_NAV[k] || PAGES[k];
+  if (P) return <div className="phone" style={{ paddingBottom: OWN_NAV[k] ? 90 : 24 }}><div className="demo">DEMO MODE — simulated, no real money moves</div><P /></div>;
   return <div style={{ display: 'contents' }} onClickCapture={intercept}><Base /></div>;
 }
