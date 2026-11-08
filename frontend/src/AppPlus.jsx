@@ -15,18 +15,12 @@ const TwoFA = pick(() => import('./settings/Pages.jsx'), 'TwoFA');
 const Notify = pick(() => import('./settings/Pages.jsx'), 'Notify');
 const Currency = pick(() => import('./settings/Pages.jsx'), 'Currency');
 const Kyc = pick(() => import('./settings/Pages.jsx'), 'Kyc');
-const Betting = pick(() => import('./services/ServicesPages.jsx'), 'Betting');
-const TV = pick(() => import('./services/ServicesPages.jsx'), 'TV');
-const Fixed = pick(() => import('./services/ServicesPages.jsx'), 'FixedPage');
-const Invite = pick(() => import('./services/ServicesPages.jsx'), 'InvitePage');
-const More = pick(() => import('./services/ServicesPages.jsx'), 'More');
 const Cards = pick(() => import('./cards/CustomerCards.jsx'));
 
 // OPay-style full-screen pages. They take precedence over the old mock pages.
 const NEW = {
   login: Login, signup: Signup, local: LocalTransfer, accounts: Wallets, intl: Wallets, move: Move, exchange: Exchange,
   personal: Personal, security: Security, twofa: TwoFA, notify: Notify, currency: Currency, kyc: Kyc, verify: Kyc,
-  betting: Betting, tv: TV, fixed: Fixed, invite: Invite, more: More, services: More, hub: More,
 };
 // Remaining pages that still live in Extra.jsx (loaded on demand, inside the phone frame).
 const OLD = ['bills', 'statements', 'limits', 'support', 'adjust', 'audit', 'forgot'];
@@ -43,7 +37,7 @@ const route = r => (r === '' && sessionStorage.getItem('gb') === 'fx' ? 'exchang
 // Profile menu rows -> their pages (the Base app's rows only had placeholders).
 const MENU = {
   'Personal Information': 'personal', 'Security Settings': 'security', 'Two-Factor Authentication': 'twofa',
-  'Notification Preferences': 'notify', 'Currency Preferences': 'currency', 'Verification Status': 'kyc', 'All Services': 'services',
+  'Notification Preferences': 'notify', 'Currency Preferences': 'currency', 'Verification Status': 'kyc',
 };
 // Capture clicks before the Base app sees them: welcome "Get Started" -> sign-up, Profile rows -> pages.
 const intercept = e => {

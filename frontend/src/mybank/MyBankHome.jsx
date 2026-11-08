@@ -8,9 +8,6 @@ const greet = () => { const h = new Date().getHours(); return h < 12 ? 'Good mor
 const hash = (h) => () => { location.hash = h; };
 const num = (n, c) => (CUR[c] ? CUR[c].sym : '') + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2 });
 
-// Everyday services grid (Betting, TV, Fixed, Invitation, More).
-const SERVICES = [['⚽', 'Betting', '#/betting'], ['📺', 'TV', '#/tv'], ['🔒', 'Fixed', '#/fixed'], ['📣', 'Invitation', '#/invite'], ['🎓', 'More', '#/more']];
-
 /** Customer home. Shows the signed-in user's real accounts (each with its own account number); falls back to demo data when logged out. */
 export default function MyBankHome({ go, tx = [], money = (n) => n }) {
   const [hide, setHide] = useState(false);
@@ -66,12 +63,6 @@ export default function MyBankHome({ go, tx = [], money = (n) => n }) {
       <div className="mb-tiles">
         {tiles.map(([ic, label, fn, n]) => (
           <button key={label} onClick={fn}><span className={'c' + (n ? ' n' : '')}><Icon n={ic} s={19} /></span>{label}</button>
-        ))}
-      </div>
-
-      <div className="mb-tiles" style={{ marginTop: 12 }}>
-        {SERVICES.map(([e, label, h]) => (
-          <button key={label} onClick={hash(h)}><span className="c" style={{ fontSize: 20 }}>{e}</span>{label}</button>
         ))}
       </div>
 
