@@ -16,11 +16,9 @@ const Notify = pick(() => import('./settings/Pages.jsx'), 'Notify');
 const Currency = pick(() => import('./settings/Pages.jsx'), 'Currency');
 const Kyc = pick(() => import('./settings/Pages.jsx'), 'Kyc');
 const Airtime = pick(() => import('./services/ServicesPages.jsx'), 'Airtime');
-const Data = pick(() => import('./services/ServicesPages.jsx'), 'Data');
 const Betting = pick(() => import('./services/ServicesPages.jsx'), 'Betting');
 const TV = pick(() => import('./services/ServicesPages.jsx'), 'TV');
 const Fixed = pick(() => import('./services/ServicesPages.jsx'), 'FixedPage');
-const Loans = pick(() => import('./services/ServicesPages.jsx'), 'LoanPage');
 const Invite = pick(() => import('./services/ServicesPages.jsx'), 'InvitePage');
 const More = pick(() => import('./services/ServicesPages.jsx'), 'More');
 const Cards = pick(() => import('./cards/CustomerCards.jsx'));
@@ -29,7 +27,7 @@ const Cards = pick(() => import('./cards/CustomerCards.jsx'));
 const NEW = {
   login: Login, signup: Signup, local: LocalTransfer, accounts: Wallets, intl: Wallets, move: Move, exchange: Exchange,
   personal: Personal, security: Security, twofa: TwoFA, notify: Notify, currency: Currency, kyc: Kyc, verify: Kyc,
-  airtime: Airtime, data: Data, betting: Betting, tv: TV, fixed: Fixed, loans: Loans, invite: Invite, more: More, services: More, hub: More,
+  airtime: Airtime, betting: Betting, tv: TV, fixed: Fixed, invite: Invite, more: More, services: More, hub: More,
 };
 // Remaining pages that still live in Extra.jsx (loaded on demand, inside the phone frame).
 const OLD = ['bills', 'statements', 'limits', 'support', 'adjust', 'audit', 'forgot'];
