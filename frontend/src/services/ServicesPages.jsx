@@ -2,10 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../auth/supabase.js';
 import { Gate, Receipt, ngn, useBalance } from './ui.jsx';
 
-/* ---------- Airtime, Betting, TV ---------- */
-const PROVIDERS = { airtime: ['MTN', 'Airtel', 'Glo', '9mobile'], betting: ['Bet9ja', 'SportyBet', '1xBet', 'BetKing', 'NairaBet', 'BetWay'], tv: ['DStv', 'GOtv', 'StarTimes'] };
+/* ---------- Betting, TV ---------- */
+const PROVIDERS = { betting: ['Bet9ja', 'SportyBet', '1xBet', 'BetKing', 'NairaBet', 'BetWay'], tv: ['DStv', 'GOtv', 'StarTimes'] };
 const CFG = {
-  airtime: { label: 'Phone number', ph: '08012345678', mode: 'amount', chips: [100, 200, 500, 1000, 2000, 5000], done: 'Airtime sent' },
   betting: { label: 'Betting account ID', ph: 'Your betting user ID', mode: 'amount', chips: [500, 1000, 2000, 5000, 10000], done: 'Betting wallet funded' },
   tv: { label: 'Smartcard / IUC number', ph: '10-digit number', mode: 'plan', done: 'Subscription paid' },
 };
@@ -74,7 +73,6 @@ function Bill({ cat }) {
     </>
   );
 }
-export const Airtime = () => <Gate title="Airtime"><Bill cat="airtime" /></Gate>;
 export const Betting = () => <Gate title="Betting"><Bill cat="betting" /></Gate>;
 export const TV = () => <Gate title="TV Subscription"><Bill cat="tv" /></Gate>;
 
@@ -202,7 +200,7 @@ export const InvitePage = () => <Gate title="Invitation"><Invite /></Gate>;
 
 /* ---------- More / All services ---------- */
 const SECTIONS = [
-  ['Pay and top up', [['📱', 'Airtime', '#/airtime'], ['⚽', 'Betting', '#/betting'], ['📺', 'TV', '#/tv'], ['💡', 'Electricity', '#/bills']]],
+  ['Pay and top up', [['⚽', 'Betting', '#/betting'], ['📺', 'TV', '#/tv'], ['💡', 'Electricity', '#/bills']]],
   ['Save and earn', [['🔒', 'Fixed', '#/fixed'], ['📣', 'Invitation', '#/invite'], ['📈', 'Invest', 'invest']]],
   ['Send and receive', [['🏦', 'To bank', '#/local'], ['🔁', 'Move money', '#/move'], ['🌍', 'International', 'transfer'], ['📥', 'Receive', '#/accounts'], ['💱', 'Exchange', '#/exchange'], ['👥', 'Beneficiaries', 'benef']]],
   ['Manage', [['🏧', 'My accounts', '#/accounts'], ['💳', 'Cards', '#/cards'], ['🧾', 'Statements', '#/statements'], ['📊', 'Limits', '#/limits'], ['📜', 'History', 'history']]],
