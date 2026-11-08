@@ -2,11 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../auth/supabase.js';
 import { Gate, Receipt, ngn, useBalance } from './ui.jsx';
 
-/* ---------- Airtime, Data, Betting, TV ---------- */
-const PROVIDERS = { airtime: ['MTN', 'Airtel', 'Glo', '9mobile'], data: ['MTN', 'Airtel', 'Glo', '9mobile'], betting: ['Bet9ja', 'SportyBet', '1xBet', 'BetKing', 'NairaBet', 'BetWay'], tv: ['DStv', 'GOtv', 'StarTimes'] };
+/* ---------- Betting, TV ---------- */
+const PROVIDERS = { betting: ['Bet9ja', 'SportyBet', '1xBet', 'BetKing', 'NairaBet', 'BetWay'], tv: ['DStv', 'GOtv', 'StarTimes'] };
 const CFG = {
-  airtime: { label: 'Phone number', ph: '08012345678', mode: 'amount', chips: [100, 200, 500, 1000, 2000, 5000], done: 'Airtime sent' },
-  data: { label: 'Phone number', ph: '08012345678', mode: 'plan', done: 'Data purchased' },
   betting: { label: 'Betting account ID', ph: 'Your betting user ID', mode: 'amount', chips: [500, 1000, 2000, 5000, 10000], done: 'Betting wallet funded' },
   tv: { label: 'Smartcard / IUC number', ph: '10-digit number', mode: 'plan', done: 'Subscription paid' },
 };
@@ -75,8 +73,6 @@ function Bill({ cat }) {
     </>
   );
 }
-export const Airtime = () => <Gate title="Airtime"><Bill cat="airtime" /></Gate>;
-export const Data = () => <Gate title="Data"><Bill cat="data" /></Gate>;
 export const Betting = () => <Gate title="Betting"><Bill cat="betting" /></Gate>;
 export const TV = () => <Gate title="TV Subscription"><Bill cat="tv" /></Gate>;
 
@@ -151,92 +147,6 @@ function Fixed() {
 }
 export const FixedPage = () => <Gate title="Fixed Deposit"><Fixed /></Gate>;
 
-/* ---------- Loan Center ---------- */
-function Loans() {
-  const [ver, setVer] = useState(undefined);
-  const [list, setList] = useState([]);
-  const [amt, setAmt] = useState('');
-  const [days, setDays] = useState(30);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState(''); const [msg, setMsg] = useState('');
-  const [bal, refresh] = useBalance();
-  const load = async () => {
-    const { data: s } = await supabase.auth.getSession();
-    const { data: v } = await supabase.from('customer_verifications').select('status').eq('user_id', s.session.user.id).maybeSingle();
-    setVer(v ? v.status : 'not_started');
-    const { data } = await supabase.from('loans').select('*').order('created_at', { ascending: false });
-    setList(data || []);
-  };
-  useEffect(() => { load(); }, []);
-
-  const active = list.find(l => l.status === 'active');
-  const n = Number(amt);
-  const interest = n > 0 ? Math.round(n * 0.04 * days / 30 * 100) / 100 : 0;
-  const apply = async () => {
-    setErr(''); setMsg('');
-    if (!(n >= 1000 && n <= 100000)) return setErr('Borrow between ₦1,000 and ₦100,000.');
-    setBusy(true);
-    const { error } = await supabase.rpc('apply_loan', { p_amount: n, p_days: days });
-    setBusy(false);
-    if (error) return setErr(error.message);
-    setAmt(''); setMsg(`${ngn(n)} was paid into your NGN account.`); load(); refresh();
-  };
-  const repay = async l => {
-    setErr(''); setMsg('');
-    const { data, error } = await supabase.rpc('repay_loan', { p_id: l.id });
-    if (error) return setErr(error.message);
-    setMsg(`Loan repaid (${ngn(data.paid)}).`); load(); refresh();
-  };
-
-  if (ver === undefined) return <p className="ot-mut">Loading...</p>;
-  return (
-    <>
-      <div className="ot-card ot-center" style={{ padding: 20 }}>
-        <small className="ot-mut">You can borrow up to</small>
-        <div className="ot-big">{ngn(100000)}</div>
-        <p className="ot-mut" style={{ margin: '4px 0 0' }}>4% interest per 30 days. Demo terms.</p>
-      </div>
-      {msg && <div className="st-toast">{msg}</div>}
-      {err && <p className="ot-err" role="alert">{err}</p>}
-
-      {active && (
-        <div className="wl-acct">
-          <div className="wl-top"><div><b>Active loan</b><small>Due {day(active.due_at)}</small></div><span className="st-tag warn" style={{ marginLeft: 'auto' }}>Active</span></div>
-          <div className="ot-kv"><span>Borrowed</span><b>{ngn(active.principal)}</b></div>
-          <div className="ot-kv"><span>Interest</span><b>{ngn(active.interest)}</b></div>
-          <div className="ot-kv"><span>Total to repay</span><b>{ngn(active.total_due)}</b></div>
-          <button className="ot-btn" onClick={() => repay(active)}>Repay {ngn(active.total_due)}</button>
-        </div>
-      )}
-
-      {!active && ver !== 'verified' && (
-        <div className="ot-card"><b>Verify your identity first</b><p className="ot-mut">Loans unlock once your verification is complete.</p><a className="ot-btn" href="#/kyc">Verify now</a></div>
-      )}
-
-      {!active && ver === 'verified' && (
-        <div className="ot-card">
-          <b>Apply for a loan</b>
-          <label className="ot-lab" style={{ marginTop: 10 }}>Amount</label>
-          <div className="ot-amt"><b>₦</b><input inputMode="decimal" placeholder="1,000 - 100,000" value={amt} onChange={e => setAmt(e.target.value.replace(/[^\d.]/g, ''))} /></div>
-          <div className="ot-chips">{[5000, 10000, 20000, 50000, 100000].map(v => <button key={v} onClick={() => setAmt(String(v))}>₦{v.toLocaleString()}</button>)}</div>
-          <label className="ot-lab">Repay within</label>
-          <div className="ot-chips">{[14, 30, 60].map(d => <button key={d} style={d === days ? { background: 'var(--g)', color: '#fff' } : {}} onClick={() => setDays(d)}>{d} days</button>)}</div>
-          <div className="ot-kv"><span>Interest</span><b>{ngn(interest)}</b></div>
-          <div className="ot-kv"><span>Total to repay</span><b>{ngn(n + interest)}</b></div>
-          <button className="ot-btn" disabled={busy} onClick={apply}>{busy ? 'Applying...' : 'Get loan'}</button>
-        </div>
-      )}
-
-      {list.filter(l => l.status === 'repaid').length > 0 && <>
-        <div className="wl-h">Past loans</div>
-        {list.filter(l => l.status === 'repaid').map(l => <div className="ot-card" key={l.id}><div className="ot-kv"><span>{day(l.created_at)}</span><b>{ngn(l.principal)} · Repaid</b></div></div>)}
-      </>}
-      <p className="ot-demo">Balance: {bal === null ? '--' : ngn(bal)}</p>
-    </>
-  );
-}
-export const LoanPage = () => <Gate title="Loan Center"><Loans /></Gate>;
-
 /* ---------- Invitation ---------- */
 function Invite() {
   const [r, setR] = useState(null);
@@ -290,8 +200,8 @@ export const InvitePage = () => <Gate title="Invitation"><Invite /></Gate>;
 
 /* ---------- More / All services ---------- */
 const SECTIONS = [
-  ['Pay and top up', [['📱', 'Airtime', '#/airtime'], ['📶', 'Data', '#/data'], ['⚽', 'Betting', '#/betting'], ['📺', 'TV', '#/tv'], ['💡', 'Electricity', '#/bills']]],
-  ['Save and borrow', [['🔒', 'Fixed', '#/fixed'], ['💰', 'Loan Center', '#/loans'], ['📣', 'Invitation', '#/invite'], ['📈', 'Invest', 'invest']]],
+  ['Pay and top up', [['⚽', 'Betting', '#/betting'], ['📺', 'TV', '#/tv'], ['💡', 'Electricity', '#/bills']]],
+  ['Save and earn', [['🔒', 'Fixed', '#/fixed'], ['📣', 'Invitation', '#/invite'], ['📈', 'Invest', 'invest']]],
   ['Send and receive', [['🏦', 'To bank', '#/local'], ['🔁', 'Move money', '#/move'], ['🌍', 'International', 'transfer'], ['📥', 'Receive', '#/accounts'], ['💱', 'Exchange', '#/exchange'], ['👥', 'Beneficiaries', 'benef']]],
   ['Manage', [['🏧', 'My accounts', '#/accounts'], ['💳', 'Cards', '#/cards'], ['🧾', 'Statements', '#/statements'], ['📊', 'Limits', '#/limits'], ['📜', 'History', 'history']]],
   ['Account and help', [['✅', 'Verification', '#/kyc'], ['🛡️', 'Security', '#/security'], ['🔔', 'Alerts', '#/notify'], ['💬', 'Support', '#/support']]],

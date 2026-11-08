@@ -8,8 +8,8 @@ const greet = () => { const h = new Date().getHours(); return h < 12 ? 'Good mor
 const hash = (h) => () => { location.hash = h; };
 const num = (n, c) => (CUR[c] ? CUR[c].sym : '') + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2 });
 
-// Everyday services grid (Airtime, Data, Betting, TV, Fixed, Loan Center, Invitation, More).
-const SERVICES = [['📱', 'Airtime', '#/airtime'], ['📶', 'Data', '#/data'], ['⚽', 'Betting', '#/betting'], ['📺', 'TV', '#/tv'], ['🔒', 'Fixed', '#/fixed'], ['💰', 'Loan Center', '#/loans'], ['📣', 'Invitation', '#/invite'], ['🎓', 'More', '#/more']];
+// Everyday services grid (Betting, TV, Fixed, Invitation, More).
+const SERVICES = [['⚽', 'Betting', '#/betting'], ['📺', 'TV', '#/tv'], ['🔒', 'Fixed', '#/fixed'], ['📣', 'Invitation', '#/invite'], ['🎓', 'More', '#/more']];
 
 /** Customer home. Shows the signed-in user's real accounts (each with its own account number); falls back to demo data when logged out. */
 export default function MyBankHome({ go, tx = [], money = (n) => n }) {
