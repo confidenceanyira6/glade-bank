@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../auth/supabase.js';
 import { CUR, ORDER, loadSettings, saveSettings, DEFAULT_SETTINGS } from '../transfer/common.js';
+import { submitKyc } from '../kycApi.js';
 import PinChange from './PinChange.jsx';
 import '../transfer/transfer.css';
 import '../transfer/wallets.css';
@@ -203,6 +204,8 @@ export function Currency() {
 const LIMITS = { 1: '₦50,000 per day', 2: '₦200,000 per day', 3: '₦5,000,000 per day' };
 const STATUS = { not_started: ['Not started', 'warn'], pending: ['Under review', 'warn'], verified: ['Verified', ''], rejected: ['Rejected', 'bad'], additional_info_required: ['More info needed', 'warn'] };
 const ID_TYPES = ['National ID (NIN slip)', "Driver's licence", 'International passport', "Voter's card"];
+// Nigerian numbers: strip spaces, a leading +234/234 or a leading 0, keep the 10-digit national number.
+const nigerianPhone = v => { let d = String(v || '').replace(/\D/g, ''); if (d.startsWith('234')) d = d.slice(3); if (d.startsWith('0')) d = d.slice(1); return d; };
 
 export function Kyc() {
   const u = useAuth();
@@ -210,7 +213,7 @@ export function Kyc() {
   const [sub, setSub] = useState(null);
   const [wiz, setWiz] = useState(false);
   const [step, setStep] = useState(1);
-  const [f, setF] = useState({ bvn: '', nin: '', idType: ID_TYPES[0], idNo: '', name: '', dob: '', address: '', city: '', region: '', postal: '', country: 'NG', ok: false });
+  const [f, setF] = useState({ bvn: '', nin: '', idType: ID_TYPES[0], idNo: '', name: '', dob: '', phone: '', address: '', city: '', region: '', postal: '', country: 'NG', ok: false });
   const [err, setErr] = useState(''); const [busy, setBusy] = useState(false);
   const set = k => e => setF({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value });
 
@@ -219,8 +222,8 @@ export function Kyc() {
     setVer(v || { status: 'not_started' });
     const { data: k } = await supabase.from('kyc_submissions').select('bvn_last4,nin_last4,id_type').eq('user_id', u.id).order('created_at', { ascending: false }).limit(1);
     setSub(k && k[0]);
-    const { data: p } = await supabase.from('profiles').select('full_name').eq('id', u.id).maybeSingle();
-    setF(x => ({ ...x, name: x.name || (v && v.legal_name) || (p && p.full_name) || '' }));
+    const { data: p } = await supabase.from('profiles').select('full_name,phone').eq('id', u.id).maybeSingle();
+    setF(x => ({ ...x, name: x.name || (v && v.legal_name) || (p && p.full_name) || '', phone: x.phone || (p && p.phone) || '' }));
   };
   useEffect(() => { if (u) load(); }, [u]);
 
@@ -236,6 +239,8 @@ export function Kyc() {
     if (step === 2) {
       if (f.name.trim().length < 3) return setErr('Enter your full legal name.');
       if (!f.dob) return setErr('Enter your date of birth.');
+      const p = nigerianPhone(f.phone);
+      if (p.length < 10 || p.length > 11) return setErr('Enter a valid phone number.');
     }
     setStep(step + 1);
   };
@@ -244,9 +249,23 @@ export function Kyc() {
     if (f.address.trim().length < 5) return setErr('Enter your residential address.');
     if (!f.ok) return setErr('Please confirm the details are correct.');
     setBusy(true);
-    const { error } = await supabase.rpc('submit_my_kyc', { p_legal_name: f.name, p_dob: f.dob, p_address: f.address, p_city: f.city, p_region: f.region, p_postal: f.postal, p_country: f.country, p_id_type: f.idType, p_id_number: f.idNo, p_bvn: f.bvn, p_nin: f.nin });
+    let error = null;
+    try {
+      // Real verification: banking partner (Maplerad) via the kyc-submit Edge Function.
+      await submitKyc(supabase, {
+        legal_name: f.name, date_of_birth: f.dob, bvn: f.bvn,
+        phone_country_code: '+234', phone_number: nigerianPhone(f.phone),
+        address: { street: f.address, city: f.city, state: f.region, postal_code: f.postal },
+      });
+    } catch (e) {
+      if (e.code === 'provider_not_configured' || e.code === 'function_unavailable') {
+        // Partner not set up yet: the database decides (demo mode verifies instantly, production refuses).
+        const r = await supabase.rpc('submit_my_kyc', { p_legal_name: f.name, p_dob: f.dob, p_address: f.address, p_city: f.city, p_region: f.region, p_postal: f.postal, p_country: f.country, p_id_type: f.idType, p_id_number: f.idNo, p_bvn: f.bvn, p_nin: f.nin });
+        error = r.error;
+      } else error = e;
+    }
     setBusy(false);
-    if (error) return setErr(error.message);
+    if (error) { setErr(error.message); load(); return; }
     setWiz(false); setStep(1); load();
   };
   const st = STATUS[status] || STATUS.not_started;
@@ -272,6 +291,8 @@ export function Kyc() {
           <input className="ot-input" value={f.name} onChange={set('name')} />
           <label className="ot-lab">Date of birth</label>
           <input className="ot-input" type="date" value={f.dob} onChange={set('dob')} />
+          <label className="ot-lab">Phone number</label>
+          <input className="ot-input" type="tel" value={f.phone} onChange={set('phone')} placeholder="0801 234 5678" autoComplete="tel" />
         </div>}
         {step === 3 && <div className="ot-card">
           <b>Step 3 of 3 · Address</b>
@@ -289,7 +310,7 @@ export function Kyc() {
         </div>}
         {err && <p className="ot-err" role="alert">{err}</p>}
         {step < 3 ? <button className="ot-btn" onClick={next}>Continue</button> : <button className="ot-btn" disabled={busy} onClick={submit}>{busy ? 'Submitting...' : 'Submit for verification'}</button>}
-        <p className="ot-demo">Demo: ID document upload is not collected here.</p>
+        <p className="ot-demo">Your BVN is sent securely to our banking partner and is not stored by Glade Bank.</p>
       </Gate>
     );
   }
@@ -303,7 +324,7 @@ export function Kyc() {
           <span className={'st-tag ' + st[1]}>{st[0]}</span>
           <h3 style={{ margin: '10px 0 4px' }}>Level {level} account</h3>
           <p className="ot-mut" style={{ margin: 0 }}>Daily limit: {LIMITS[level]}</p>
-          {status === 'rejected' && ver.rejection_reason && <p className="ot-err">{ver.rejection_reason}</p>}
+          {(status === 'rejected' || status === 'additional_info_required') && ver.rejection_reason && <p className="ot-err">{ver.rejection_reason}</p>}
         </div>
         {tiers.map(([n, t, d, done]) => <div key={n} className={'st-tier' + (done ? ' done' : '')}><span className="n">{done ? '✓' : n}</span><div><b>{t}</b><small>{d}</small><small>Limit: {LIMITS[n]}</small></div></div>)}
         {status === 'verified' && ver && (
