@@ -5,15 +5,16 @@ import { Icon } from './mybank/icons.jsx';
 import { INTL_ACCOUNTS } from './mybank/accounts.js';
 import { loadAccounts } from './transfer/common.js';
 import { supabase } from './auth/supabase.js';
+import { CODES, COUNTRIES, FLAG, rateFor, currencyOfCountry } from './currencies.js';
 import './mybank/mybank.css';
 
 // GLADE BANK — UI MOCKUP. Local demo data only. No backend calls.
-const R = { USD: 1, NGN: 1540.25, EUR: 0.92, GBP: 0.79, CAD: 1.36 };
-const FLAG = { 'United States': '🇺🇸', 'United Kingdom': '🇬🇧', Canada: '🇨🇦', Germany: '🇩🇪', Nigeria: '🇳🇬', USD: '🇺🇸', EUR: '🇪🇺', GBP: '🇬🇧', CAD: '🇨🇦', NGN: '🇳🇬' };
+// Currencies, countries and (placeholder) rates live in ./currencies.js
 // No sample transactions. Real transactions come from the ledger once they are wired in.
 const TX = [];
 const money = (n, c) => (n < 0 ? '-' : '+') + (c === 'NGN' ? '₦' : '$') + Math.abs(n).toLocaleString();
 const FROM = ['NGN ••••6789 (Savings)', ...INTL_ACCOUNTS.map(a => a.cur + ' ••••' + a.number.slice(-4))];
+const ratio = (to, from) => { const a = rateFor(to), b = rateFor(from); return a && b ? a / b : 0; };
 
 const Logo = ({ sub }) => <div className="logo"><svg width="34" height="34" viewBox="0 0 40 40"><circle cx="20" cy="20" r="19" fill="#0f7a3d" /><text x="20" y="28" textAnchor="middle" fontSize="24" fontWeight="800" fill="#fff">G</text></svg><span>GLADE BANK{sub && <small>{sub}</small>}</span></div>;
 const Fld = ({ l, ic, opts, ...p }) => <label className="field"><span>{l}</span><div className="inp">{ic && <i>{ic}</i>}{opts ? <select {...p}>{opts.map(o => <option key={o}>{o}</option>)}</select> : <input {...p} />}</div></label>;
@@ -46,11 +47,12 @@ const HomeScreen = p => <MyBankHome {...p} tx={TX} money={money} />;
 function Transfer({ go }) {
   const [s, setS] = useState(1), [f, setF] = useState({ country: 'United States', cur: 'USD', amt: 500, name: '', from: FROM[0] });
   const set = k => e => setF({ ...f, [k]: e.target.value });
-  const fee = 15, rate = R.NGN / R[f.cur], get = Math.max(0, f.amt - fee);
-  const dyn = { 'United States': ['ABA / Routing number', 'Account number'], 'United Kingdom': ['Sort code', 'Account number'], Germany: ['IBAN', 'SWIFT/BIC'], Canada: ['Institution number', 'Account number'] }[f.country];
+  const setCountry = e => setF({ ...f, country: e.target.value, cur: currencyOfCountry(e.target.value) || f.cur });
+  const fee = 15, rate = ratio('NGN', f.cur), get = Math.max(0, f.amt - fee);
+  const dyn = { 'United States': ['ABA / Routing number', 'Account number'], 'United Kingdom': ['Sort code', 'Account number'], Germany: ['IBAN', 'SWIFT/BIC'], Canada: ['Institution number', 'Account number'], Nigeria: ['NUBAN account number', 'Bank code'] }[f.country] || ['SWIFT/BIC', 'Account number'];
   if (s === 5) return <><Top t="Transfer Tracking" go={go} /><div className="pad"><div className="card"><span className="tag w">SIMULATED · Processing</span><h3>{f.amt} {f.cur} to {f.name || 'Recipient'}</h3><p>Ref: GB-DEMO-48213</p><p>Draft → Awaiting payment → <b>Processing</b> → Completed</p><small>No real transfer occurred. Demonstration only.</small></div><button className="btn" onClick={() => go('home')}>Back to Home</button></div></>;
   return <><Top t="International Transfer" go={go} /><div className="pad"><Steps n={s} t={4} />
-    {s === 1 && <><h3 style={{ margin: '0 0 4px', color: 'var(--navy)' }}>Transfer Details</h3><Fld l="From account" ic="🏦" value={f.from} onChange={set('from')} opts={FROM} /><a href="#/accounts" style={{ fontSize: 13, fontWeight: 600 }}>View my international accounts →</a><Fld l="Country" ic={FLAG[f.country]} value={f.country} onChange={set('country')} opts={['United States', 'United Kingdom', 'Germany', 'Canada']} /><Fld l="Currency" ic={FLAG[f.cur]} value={f.cur} onChange={set('cur')} opts={['USD', 'GBP', 'EUR', 'CAD']} /><Fld l="Transfer Method" ic="🏦" opts={['Bank Transfer', 'Mobile wallet']} /><Fld l="Amount to send" type="number" value={f.amt} onChange={set('amt')} />
+    {s === 1 && <><h3 style={{ margin: '0 0 4px', color: 'var(--navy)' }}>Transfer Details</h3><Fld l="From account" ic="🏦" value={f.from} onChange={set('from')} opts={FROM} /><a href="#/accounts" style={{ fontSize: 13, fontWeight: 600 }}>View my international accounts →</a><Fld l="Country" ic={FLAG[f.country]} value={f.country} onChange={setCountry} opts={COUNTRIES} /><Fld l="Currency" ic={FLAG[f.cur]} value={f.cur} onChange={set('cur')} opts={CODES} /><Fld l="Transfer Method" ic="🏦" opts={['Bank Transfer', 'Mobile wallet']} /><Fld l="Amount to send" type="number" value={f.amt} onChange={set('amt')} />
       <div className="card"><div className="kv"><span>Exchange Rate (demo)</span><b>₦{rate.toFixed(2)} / {f.cur}</b></div><div className="kv"><span>Transfer Fee</span><b>{fee.toFixed(2)}</b></div><div className="kv"><span>You Receive</span><b>{get} {f.cur}</b></div><div className="kv"><span>Estimated Delivery</span><b>1-3 Business Days</b></div></div></>}
     {s === 2 && <><h3>Recipient</h3><Fld l="Full name" value={f.name} onChange={set('name')} /><Fld l="Email" /><Fld l="Phone" /><Fld l="Address" /><Fld l="Purpose" opts={['Personal expenses', 'Family support', 'Education', 'Business payment', 'Other']} /></>}
     {s === 3 && <><h3>Bank Details</h3><Fld l="Bank name" />{dyn.map(d => <Fld key={d} l={d} />)}</>}
@@ -81,10 +83,10 @@ function History({ go }) {
 }
 
 function Fx({ go }) {
-  const [a, setA] = useState({ from: 'USD', to: 'EUR', amt: 500 }), [done, setDone] = useState(false), r = R[a.to] / R[a.from];
-  return <><Top t="Currency Exchange" go={go} bell={false} /><div className="pad"><span className="tag w">Demonstration rates</span><Fld l="From" ic={FLAG[a.from]} value={a.from} onChange={e => setA({ ...a, from: e.target.value })} opts={Object.keys(R)} /><Fld l="To" ic={FLAG[a.to]} value={a.to} onChange={e => setA({ ...a, to: e.target.value })} opts={Object.keys(R)} /><Fld l="Amount" type="number" value={a.amt} onChange={e => setA({ ...a, amt: +e.target.value })} />
-    <div style={{ display: 'flex', gap: 8 }}>{[100, 500, 1000].map(v => <button key={v} className="tag" style={{ flex: 1, padding: 9 }} onClick={() => setA({ ...a, amt: v })}>${v}</button>)}</div>
-    <div className="card" style={{ marginTop: 12 }}><small>You Get</small><div style={{ fontSize: 28, fontWeight: 800, color: 'var(--navy)' }}>{Math.max(0, (a.amt - 5) * r).toFixed(2)} {a.to}</div><small>Rate: {r.toFixed(4)} · Fee: $5.00</small></div><button className="btn" onClick={() => setDone(true)}>Exchange Now →</button>{done && <p className="pos">✓ Demo exchange recorded (simulated)</p>}</div></>;
+  const [a, setA] = useState({ from: 'NGN', to: 'USD', amt: 500 }), [done, setDone] = useState(false), r = ratio(a.to, a.from);
+  return <><Top t="Currency Exchange" go={go} bell={false} /><div className="pad"><span className="tag w">Demonstration rates</span><Fld l="From" ic={FLAG[a.from]} value={a.from} onChange={e => setA({ ...a, from: e.target.value })} opts={CODES} /><Fld l="To" ic={FLAG[a.to]} value={a.to} onChange={e => setA({ ...a, to: e.target.value })} opts={CODES} /><Fld l="Amount" type="number" value={a.amt} onChange={e => setA({ ...a, amt: +e.target.value })} />
+    <div style={{ display: 'flex', gap: 8 }}>{[100, 500, 1000].map(v => <button key={v} className="tag" style={{ flex: 1, padding: 9 }} onClick={() => setA({ ...a, amt: v })}>{v}</button>)}</div>
+    <div className="card" style={{ marginTop: 12 }}><small>You Get</small><div style={{ fontSize: 28, fontWeight: 800, color: 'var(--navy)' }}>{Math.max(0, a.amt * r).toFixed(2)} {a.to}</div><small>Rate: {r.toFixed(4)}</small></div><button className="btn" onClick={() => setDone(true)}>Exchange Now →</button>{done && <p className="pos">✓ Demo exchange recorded (simulated)</p>}</div></>;
 }
 
 function Receive({ go }) {
