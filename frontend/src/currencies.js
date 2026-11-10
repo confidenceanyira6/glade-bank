@@ -1,28 +1,19 @@
-// Single place that lists every country / currency the app offers.
-// To add or remove a corridor, edit CURRENCIES only. Order = order shown in the dropdowns.
+// Countries / currencies the app offers for sending money.
+// Limited to what Maplerad's docs say it can pay out to (maplerad.dev/docs/transfers):
+//   NGN bank transfer, USD (FEDWIRE / ACH), Francophone mobile money (XAF shown in their example).
+// Accounts customers can OPEN are controlled separately by the database table public.country_account_catalog
+// (currently NGN and USD, matching Maplerad's Collections docs).
+// To add a corridor later, add a row here AFTER confirming Maplerad supports it for your account.
 // [currency code, country name, flag]
 export const CURRENCIES = [
   ['NGN', 'Nigeria', '🇳🇬'],
   ['USD', 'United States', '🇺🇸'],
-  ['GBP', 'United Kingdom', '🇬🇧'],
-  ['EUR', 'Germany', '🇪🇺'],
-  ['CAD', 'Canada', '🇨🇦'],
-  ['GHS', 'Ghana', '🇬🇭'],
-  ['KES', 'Kenya', '🇰🇪'],
-  ['ZAR', 'South Africa', '🇿🇦'],
-  ['UGX', 'Uganda', '🇺🇬'],
-  ['TZS', 'Tanzania', '🇹🇿'],
-  ['XOF', 'Senegal', '🇸🇳'],
-  ['EGP', 'Egypt', '🇪🇬'],
-  ['AED', 'United Arab Emirates', '🇦🇪'],
-  ['INR', 'India', '🇮🇳'],
-  ['CNY', 'China', '🇨🇳'],
-  ['AUD', 'Australia', '🇦🇺'],
+  ['XAF', 'Cameroon', '🇨🇲'],
 ];
 
 // PLACEHOLDER demo rates, units per 1 USD. NOT real market rates.
-// Replace rateFor() with your live conversion (e.g. read from the exchange_rates table or an FX API).
-const DEMO_RATES = { USD: 1, NGN: 1540.25, EUR: 0.92, GBP: 0.79, CAD: 1.36, GHS: 15.5, KES: 129, ZAR: 18.2, UGX: 3700, TZS: 2600, XOF: 605, EGP: 49, AED: 3.67, INR: 84, CNY: 7.2, AUD: 1.52 };
+// Replace rateFor() with your live conversion (e.g. read from the exchange_rates table or Maplerad's FX API).
+const DEMO_RATES = { USD: 1, NGN: 1540.25, XAF: 605 };
 
 // Units of `code` per 1 USD. Return null if no rate is available.
 export const rateFor = (code) => (DEMO_RATES[code] != null ? DEMO_RATES[code] : null);
