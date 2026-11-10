@@ -4,6 +4,7 @@
 //   POST   /customers                    create customer (tier 0)
 //   PATCH  /customers/upgrade/tier1      upgrade to tier 1
 //   POST   /collections/virtual-account  create a virtual account (NGN documented; USD documented as a separate product page)
+// UNCONFIRMED (written by pattern, verify in sandbox): PATCH /customers/upgrade/tier2 and its body shape.
 // NOT yet confirmed against the sandbox: the auth header scheme (default Bearer), the sandbox base URL, the exact
 // response shapes (parsed defensively in pick()), and whether USD accounts use this same endpoint/tier.
 //
@@ -76,6 +77,14 @@ export async function upgradeTier1(i: {
   photo?: string;
 }) {
   await call("PATCH", "/customers/upgrade/tier1", i);
+}
+
+/** Glade level 3 (NIN + ID) = Maplerad tier 2. Path and body are UNCONFIRMED: check Maplerad's tier 2 docs in the sandbox. */
+export async function upgradeTier2(i: {
+  customer_id: string;
+  identity: { type: string; number: string; image?: string; country: string };
+}) {
+  await call("PATCH", "/customers/upgrade/tier2", i);
 }
 
 export async function createVirtualAccount(customer_id: string, currency: string, preferred_bank?: string) {
