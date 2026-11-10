@@ -1,14 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import MyBankHome from './mybank/MyBankHome.jsx';
 import AdminCards from './cards/AdminCards.jsx';
 import { Icon } from './mybank/icons.jsx';
 import { INTL_ACCOUNTS } from './mybank/accounts.js';
+import { loadAccounts } from './transfer/common.js';
+import { supabase } from './auth/supabase.js';
 import './mybank/mybank.css';
 
 // GLADE BANK — UI MOCKUP. Local demo data only. No backend calls.
 const R = { USD: 1, NGN: 1540.25, EUR: 0.92, GBP: 0.79, CAD: 1.36 };
 const FLAG = { 'United States': '🇺🇸', 'United Kingdom': '🇬🇧', Canada: '🇨🇦', Germany: '🇩🇪', Nigeria: '🇳🇬', USD: '🇺🇸', EUR: '🇪🇺', GBP: '🇬🇧', CAD: '🇨🇦', NGN: '🇳🇬' };
-const TX = [['International Transfer', 'To USA · Sep 12, 2025 · 10:24 AM', -500, 'USD', '🇺🇸', 'T'], ['Salary Credit', 'From Employer · Sep 10, 2025', 250000, 'NGN', '💼', 'D'], ['Bill Payment', 'Sep 08, 2025 · 06:20 PM', -12500, 'NGN', '🧾', 'T'], ['Investment', 'Sep 05, 2025 · 11:10 AM', -100000, 'NGN', '📈', 'T']];
+// No sample transactions. Real transactions come from the ledger once they are wired in.
+const TX = [];
 const money = (n, c) => (n < 0 ? '-' : '+') + (c === 'NGN' ? '₦' : '$') + Math.abs(n).toLocaleString();
 const FROM = ['NGN ••••6789 (Savings)', ...INTL_ACCOUNTS.map(a => a.cur + ' ••••' + a.number.slice(-4))];
 
@@ -74,7 +77,7 @@ function History({ go }) {
   const [q, setQ] = useState(''), [tab, setTab] = useState('All'), [open, setOpen] = useState(null);
   const rows = TX.filter(t => t[0].toLowerCase().includes(q.toLowerCase()) && (tab === 'All' || (tab === 'Deposits' ? t[2] > 0 : t[2] < 0)));
   return <><Top t="Transaction History" go={go} /><div className="pad"><div className="tabs">{['All', 'Transfers', 'Deposits', 'More'].map(t => <button key={t} className={tab === t ? 'on' : ''} onClick={() => setTab(t)}>{t}</button>)}</div><Fld l="" ic="🔍" placeholder="Search transactions..." value={q} onChange={e => setQ(e.target.value)} />
-    {rows.length === 0 && <p>No transactions found.</p>}{rows.map((t, i) => <div key={t[0]}><div className="row" onClick={() => setOpen(open === i ? null : i)}><div className="av">{t[4]}</div><span className="g">{t[0]}<small>{t[1]}</small></span><span className={t[2] < 0 ? 'neg' : 'pos'}>{money(t[2], t[3])}</span></div>{open === i && <div className="card">ID: TX-{1000 + i} · Status: Completed (demo)<br /><button className="tag" onClick={() => alert('Receipt download needs the backend')}>Download receipt</button></div>}</div>)}</div></>;
+    {rows.length === 0 && <p>No transactions yet.</p>}{rows.map((t, i) => <div key={t[0]}><div className="row" onClick={() => setOpen(open === i ? null : i)}><div className="av">{t[4]}</div><span className="g">{t[0]}<small>{t[1]}</small></span><span className={t[2] < 0 ? 'neg' : 'pos'}>{money(t[2], t[3])}</span></div>{open === i && <div className="card">ID: TX-{1000 + i} · Status: Completed<br /><button className="tag" onClick={() => alert('Receipt download needs the backend')}>Download receipt</button></div>}</div>)}</div></>;
 }
 
 function Fx({ go }) {
@@ -85,20 +88,36 @@ function Fx({ go }) {
 }
 
 function Receive({ go }) {
-  return <><Top t="Receive Money" go={go} /><div className="pad"><span className="tag w">DEMO details — not a real account</span><div className="card" style={{ marginTop: 10 }}><div className="kv"><span>Holder</span><b>Confidence Anyira</b></div><div className="kv"><span>Bank</span><b>Glade Bank (demo)</b></div><div className="kv"><span>Account</span><b>0123456789</b></div><div className="kv"><span>Currency</span><b>NGN</b></div></div><button className="btn" onClick={() => navigator.clipboard?.writeText('0123456789')}>Copy details</button><button className="btn alt">Share</button></div></>;
+  const [r, setR] = useState(null);
+  useEffect(() => { loadAccounts().then(setR).catch(() => setR({ user: null, accounts: [] })); }, []);
+  const accts = (r && r.accounts) || [];
+  const a = accts.find(x => x.currency === 'NGN') || accts[0];
+  const holder = r && r.user && r.user.user_metadata && r.user.user_metadata.full_name;
+  return <><Top t="Receive Money" go={go} /><div className="pad">
+    {!r && <p>Loading…</p>}
+    {r && !a && <p>You don't have an account yet. Your account details will appear here once your identity is verified and our banking partner issues your account.</p>}
+    {a && <><div className="card" style={{ marginTop: 10 }}>{holder && <div className="kv"><span>Holder</span><b>{holder}</b></div>}<div className="kv"><span>Bank</span><b>{a.bank_name || 'Glade Bank'}</b></div><div className="kv"><span>Account</span><b>{a.account_number || 'Pending'}</b></div><div className="kv"><span>Currency</span><b>{a.currency}</b></div></div>
+      {a.account_number && <button className="btn" onClick={() => navigator.clipboard?.writeText(a.account_number)}>Copy details</button>}</>}
+  </div></>;
 }
 
 function Notifs({ go }) {
-  const [tab, setTab] = useState('All'), [n, setN] = useState([['✅', 'Transfer Successful', 'Your $500.00 transfer to USA was successful (demo). · 2m ago', 1], ['📈', 'New Investment', 'Your investment plan is active. · 1h ago', 1], ['🛡', 'Security Alert', 'New login from Lagos, NG. · 2h ago', 1], ['🔔', 'Welcome to Glade Bank!', 'Start exploring your account. · 1d ago', 0]]);
+  const [tab, setTab] = useState('All'), [n, setN] = useState([]);
   const un = n.filter(x => x[3]).length;
   return <><Top t="Notifications" go={go} bell={false} /><div className="pad"><div className="tabs">{['All', 'Unread (' + un + ')'].map(t => <button key={t} className={tab === t.split(' ')[0] ? 'on' : ''} onClick={() => setTab(t.split(' ')[0])}>{t}</button>)}</div>
+    {n.length === 0 && <p>No notifications yet.</p>}
     {n.filter(x => tab === 'All' || x[3]).map((x, i) => <div className="row" key={i}><div className="av">{x[0]}</div><span className="g"><b>{x[1]}</b><small>{x[2]}</small></span>{x[3] ? <span className="tag">new</span> : null}</div>)}<button className="btn alt" onClick={() => setN(n.map(x => [x[0], x[1], x[2], 0]))}>Mark all as read</button></div></>;
 }
 
 function Profile({ go }) {
-  const L = [['👤', 'Personal Information', ''], ['🛡', 'Security Settings', '#/security'], ['🔐', 'Two-Factor Authentication', '#/security', 'Enabled'], ['🔔', 'Notification Preferences', ''], ['💱', 'Currency Preferences', ''], ['✅', 'Verification Status', '#/verify', 'Verified'], ['🗂', 'All Services', '#/hub'], ['💬', 'Help & Support', '#/support']];
-  return <><Top t="Profile & Settings" go={go} bell={false} /><div className="pad"><div style={{ textAlign: 'center', margin: '8px 0 14px' }}><div className="av" style={{ width: 84, height: 84, fontSize: 44, margin: '0 auto 8px' }}>👤</div><b>Confidence Anyira</b><br /><small style={{ color: 'var(--mut)' }}>confidence@email.com</small></div>
-    {L.map(l => <div className="menu" key={l[1]} onClick={() => (l[2] ? (location.hash = l[2]) : alert(l[1] + ' — screen not built yet'))}><span>{l[0]}</span><span className="g">{l[1]}</span>{l[3] && <span className="tag">{l[3]}</span>}<span>›</span></div>)}<button className="btn alt" style={{ color: 'var(--red)' }} onClick={() => go('welcome')}>Log Out</button></div></>;
+  const [u, setU] = useState(null);
+  useEffect(() => { loadAccounts().then(r => setU(r && r.user)).catch(() => {}); }, []);
+  const name = (u && u.user_metadata && u.user_metadata.full_name) || 'Your profile';
+  const email = (u && u.email) || '';
+  const L = [['👤', 'Personal Information', ''], ['🛡', 'Security Settings', '#/security'], ['🔐', 'Two-Factor Authentication', '#/security'], ['🔔', 'Notification Preferences', ''], ['💱', 'Currency Preferences', ''], ['✅', 'Verification Status', '#/verify'], ['🗂', 'All Services', '#/hub'], ['💬', 'Help & Support', '#/support']];
+  const logout = async () => { try { await supabase.auth.signOut(); } catch (e) { /* ignore */ } go('welcome'); };
+  return <><Top t="Profile & Settings" go={go} bell={false} /><div className="pad"><div style={{ textAlign: 'center', margin: '8px 0 14px' }}><div className="av" style={{ width: 84, height: 84, fontSize: 44, margin: '0 auto 8px' }}>👤</div><b>{name}</b><br /><small style={{ color: 'var(--mut)' }}>{email}</small></div>
+    {L.map(l => <div className="menu" key={l[1]} onClick={() => (l[2] ? (location.hash = l[2]) : alert(l[1] + ' — screen not built yet'))}><span>{l[0]}</span><span className="g">{l[1]}</span><span>›</span></div>)}<button className="btn alt" style={{ color: 'var(--red)' }} onClick={logout}>Log Out</button></div></>;
 }
 
 function Admin({ go }) {
