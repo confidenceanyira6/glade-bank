@@ -204,18 +204,27 @@ export function Currency() {
 const LIMITS = { 1: '₦50,000 per day', 2: '₦200,000 per day', 3: '₦5,000,000 per day' };
 const STATUS = { not_started: ['Not started', 'warn'], pending: ['Under review', 'warn'], verified: ['Verified', ''], rejected: ['Rejected', 'bad'], additional_info_required: ['More info needed', 'warn'] };
 const ID_TYPES = ['National ID (NIN slip)', "Driver's licence", 'International passport', "Voter's card"];
-// Nigerian numbers: strip spaces, a leading +234/234 or a leading 0, keep the 10-digit national number.
-const nigerianPhone = v => { let d = String(v || '').replace(/\D/g, ''); if (d.startsWith('234')) d = d.slice(3); if (d.startsWith('0')) d = d.slice(1); return d; };
+// Calling codes for the countries we can open accounts in. A country missing here cannot verify yet.
+const CALLING = { NG: '234', US: '1' };
+// National number only: strip spaces/symbols, a leading country code (when the number is clearly too long) and Nigeria's leading 0.
+const nationalPhone = (v, cc) => {
+  let d = String(v || '').replace(/\D/g, ''); const code = CALLING[cc];
+  if (code && d.startsWith(code) && d.length > 10) d = d.slice(code.length);
+  if (cc === 'NG' && d.startsWith('0')) d = d.slice(1);
+  return d;
+};
 
 export function Kyc() {
   const u = useAuth();
   const [ver, setVer] = useState(undefined);
   const [sub, setSub] = useState(null);
+  const [countries, setCountries] = useState([['NG', 'Nigeria']]);
   const [wiz, setWiz] = useState(false);
   const [step, setStep] = useState(1);
   const [f, setF] = useState({ bvn: '', nin: '', idType: ID_TYPES[0], idNo: '', name: '', dob: '', phone: '', address: '', city: '', region: '', postal: '', country: 'NG', ok: false });
   const [err, setErr] = useState(''); const [busy, setBusy] = useState(false);
   const set = k => e => setF({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value });
+  const isNG = f.country === 'NG';
 
   const load = async () => {
     const { data: v } = await supabase.from('customer_verifications').select('*').eq('user_id', u.id).maybeSingle();
@@ -224,6 +233,9 @@ export function Kyc() {
     setSub(k && k[0]);
     const { data: p } = await supabase.from('profiles').select('full_name,phone').eq('id', u.id).maybeSingle();
     setF(x => ({ ...x, name: x.name || (v && v.legal_name) || (p && p.full_name) || '', phone: x.phone || (p && p.phone) || '' }));
+    // Only countries we can actually open accounts in (Maplerad-supported, from country_account_catalog).
+    const { data: c } = await supabase.from('country_account_catalog').select('country,country_name').order('sort_order');
+    if (c && c.length) { const m = new Map(); c.forEach(r => m.set(r.country, r.country_name)); setCountries([...m.entries()]); }
   };
   useEffect(() => { if (u) load(); }, [u]);
 
@@ -232,15 +244,18 @@ export function Kyc() {
   const next = () => {
     setErr('');
     if (step === 1) {
-      if (!/^\d{11}$/.test(f.bvn)) return setErr('BVN must be 11 digits.');
-      if (!/^\d{11}$/.test(f.nin)) return setErr('NIN must be 11 digits.');
+      if (!CALLING[f.country]) return setErr('We cannot verify customers in this country yet.');
+      if (isNG) {
+        if (!/^\d{11}$/.test(f.bvn)) return setErr('BVN must be 11 digits.');
+        if (!/^\d{11}$/.test(f.nin)) return setErr('NIN must be 11 digits.');
+      }
       if (f.idNo.trim().length < 5) return setErr('Enter your ID number.');
     }
     if (step === 2) {
       if (f.name.trim().length < 3) return setErr('Enter your full legal name.');
       if (!f.dob) return setErr('Enter your date of birth.');
-      const p = nigerianPhone(f.phone);
-      if (p.length < 10 || p.length > 11) return setErr('Enter a valid phone number.');
+      const p = nationalPhone(f.phone, f.country);
+      if (isNG ? p.length !== 10 : (p.length < 7 || p.length > 12)) return setErr('Enter a valid phone number.');
     }
     setStep(step + 1);
   };
@@ -253,12 +268,13 @@ export function Kyc() {
     try {
       // Real verification: banking partner (Maplerad) via the kyc-submit Edge Function.
       await submitKyc(supabase, {
-        legal_name: f.name, date_of_birth: f.dob, bvn: f.bvn,
-        phone_country_code: '+234', phone_number: nigerianPhone(f.phone),
+        country: f.country, legal_name: f.name, date_of_birth: f.dob,
+        ...(isNG ? { bvn: f.bvn } : {}), id_number: f.idNo.trim(),
+        phone_country_code: '+' + CALLING[f.country], phone_number: nationalPhone(f.phone, f.country),
         address: { street: f.address, city: f.city, state: f.region, postal_code: f.postal },
       });
     } catch (e) {
-      if (e.code === 'provider_not_configured' || e.code === 'function_unavailable') {
+      if ((e.code === 'provider_not_configured' || e.code === 'function_unavailable') && isNG) {
         // Partner not set up yet: the database decides (demo mode verifies instantly, production refuses).
         const r = await supabase.rpc('submit_my_kyc', { p_legal_name: f.name, p_dob: f.dob, p_address: f.address, p_city: f.city, p_region: f.region, p_postal: f.postal, p_country: f.country, p_id_type: f.idType, p_id_number: f.idNo, p_bvn: f.bvn, p_nin: f.nin });
         error = r.error;
@@ -275,11 +291,15 @@ export function Kyc() {
       <Gate u={u} title="Verify your identity" onBack={() => { if (step > 1) setStep(step - 1); else setWiz(false); }}>
         <div className="st-steps">{[1, 2, 3].map(i => <i key={i} className={i <= step ? 'on' : ''} />)}</div>
         {step === 1 && <div className="ot-card">
-          <b>Step 1 of 3 · Identity numbers</b>
-          <label className="ot-lab" style={{ marginTop: 10 }}>BVN (11 digits)</label>
-          <input className="ot-input" inputMode="numeric" maxLength={11} value={f.bvn} onChange={e => setF({ ...f, bvn: e.target.value.replace(/\D/g, '') })} />
-          <label className="ot-lab">NIN (11 digits)</label>
-          <input className="ot-input" inputMode="numeric" maxLength={11} value={f.nin} onChange={e => setF({ ...f, nin: e.target.value.replace(/\D/g, '') })} />
+          <b>Step 1 of 3 · Identity</b>
+          <label className="ot-lab" style={{ marginTop: 10 }}>Country you live in</label>
+          <select className="st-sel" value={f.country} onChange={set('country')}>{countries.map(([c, n]) => <option key={c} value={c}>{n}</option>)}</select>
+          {isNG && <>
+            <label className="ot-lab">BVN (11 digits)</label>
+            <input className="ot-input" inputMode="numeric" maxLength={11} value={f.bvn} onChange={e => setF({ ...f, bvn: e.target.value.replace(/\D/g, '') })} />
+            <label className="ot-lab">NIN (11 digits)</label>
+            <input className="ot-input" inputMode="numeric" maxLength={11} value={f.nin} onChange={e => setF({ ...f, nin: e.target.value.replace(/\D/g, '') })} />
+          </>}
           <label className="ot-lab">ID type</label>
           <select className="st-sel" value={f.idType} onChange={set('idType')}>{ID_TYPES.map(t => <option key={t}>{t}</option>)}</select>
           <label className="ot-lab">ID number</label>
@@ -291,8 +311,8 @@ export function Kyc() {
           <input className="ot-input" value={f.name} onChange={set('name')} />
           <label className="ot-lab">Date of birth</label>
           <input className="ot-input" type="date" value={f.dob} onChange={set('dob')} />
-          <label className="ot-lab">Phone number</label>
-          <input className="ot-input" type="tel" value={f.phone} onChange={set('phone')} placeholder="0801 234 5678" autoComplete="tel" />
+          <label className="ot-lab">Phone number (+{CALLING[f.country] || ''})</label>
+          <input className="ot-input" type="tel" value={f.phone} onChange={set('phone')} placeholder={isNG ? '0801 234 5678' : 'Phone number'} autoComplete="tel" />
         </div>}
         {step === 3 && <div className="ot-card">
           <b>Step 3 of 3 · Address</b>
@@ -304,13 +324,11 @@ export function Kyc() {
           <input className="ot-input" value={f.region} onChange={set('region')} />
           <label className="ot-lab">Postal code</label>
           <input className="ot-input" value={f.postal} onChange={set('postal')} />
-          <label className="ot-lab">Country</label>
-          <select className="st-sel" value={f.country} onChange={set('country')}>{COUNTRIES.map(([c, n]) => <option key={c} value={c}>{n}</option>)}</select>
           <label className="st-check"><input type="checkbox" checked={f.ok} onChange={set('ok')} /><span>I confirm these details are correct.</span></label>
         </div>}
         {err && <p className="ot-err" role="alert">{err}</p>}
         {step < 3 ? <button className="ot-btn" onClick={next}>Continue</button> : <button className="ot-btn" disabled={busy} onClick={submit}>{busy ? 'Submitting...' : 'Submit for verification'}</button>}
-        <p className="ot-demo">Your BVN is sent securely to our banking partner and is not stored by Glade Bank.</p>
+        <p className="ot-demo">Your ID numbers are sent securely to our banking partner and are not stored by Glade Bank. After verification you get a free account number for your country.</p>
       </Gate>
     );
   }
