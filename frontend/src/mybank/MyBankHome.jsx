@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { Icon } from './icons.jsx';
-import { ACCOUNT, INTL_ACCOUNTS, fmtMoney } from './accounts.js';
 import { CUR, loadAccounts, loadSettings } from '../transfer/common.js';
 import './mybank.css';
 
@@ -8,25 +7,26 @@ const greet = () => { const h = new Date().getHours(); return h < 12 ? 'Good mor
 const hash = (h) => () => { location.hash = h; };
 const num = (n, c) => (CUR[c] ? CUR[c].sym : '') + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2 });
 
-/** Customer home. Shows the signed-in user's real accounts (each with its own account number); falls back to demo data when logged out. */
+/** Customer home. Shows only the signed-in user's real accounts. If the user has no account yet it shows a zero balance, never sample data. */
 export default function MyBankHome({ go, tx = [], money = (n) => n }) {
   const [hide, setHide] = useState(false);
   const [copied, setCopied] = useState(false);
   const [real, setReal] = useState(null);
   const [base, setBase] = useState('NGN');
   useEffect(() => {
-    loadAccounts().then(r => { if (r.user && r.accounts.length) setReal(r); });
+    loadAccounts().then(r => { if (r && r.user) setReal(r); });
     loadSettings().then(s => { if (s) setBase(s.base_currency); });
   }, []);
 
+  const accounts = real && real.accounts ? real.accounts : [];
   // The main account is the one in the user's chosen main currency (Profile > Currency Preferences).
-  const main = real ? (real.accounts.find(a => a.currency === base) || real.accounts.find(a => a.currency === 'NGN') || real.accounts[0]) : null;
-  const others = real ? real.accounts.filter(a => a !== main) : [];
-  const number = main ? main.account_number : ACCOUNT.number;
-  const full = real && real.user.user_metadata && real.user.user_metadata.full_name;
-  const first = full ? full.split(' ')[0] : 'Confidence';
-  const initials = full ? full.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase() : 'CA';
-  const copy = () => { navigator.clipboard?.writeText(number); setCopied(true); setTimeout(() => setCopied(false), 1500); };
+  const main = accounts.length ? (accounts.find(a => a.currency === base) || accounts.find(a => a.currency === 'NGN') || accounts[0]) : null;
+  const others = accounts.filter(a => a !== main);
+  const number = main ? main.account_number : null;
+  const full = real && real.user && real.user.user_metadata && real.user.user_metadata.full_name;
+  const first = full ? full.split(' ')[0] : 'there';
+  const initials = full ? full.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase() : 'G';
+  const copy = () => { if (!number) return; navigator.clipboard?.writeText(number); setCopied(true); setTimeout(() => setCopied(false), 1500); };
 
   const tiles = [
     ['send', 'Send', hash('#/local')],
@@ -49,14 +49,14 @@ export default function MyBankHome({ go, tx = [], money = (n) => n }) {
       </div>
 
       <div className="mb-bal">
-        <span className="lab">{main ? `${CUR[main.currency].country} balance` : 'Total Balance'}
+        <span className="lab">{main && CUR[main.currency] ? `${CUR[main.currency].country} balance` : 'Total Balance'}
           <button onClick={() => setHide(!hide)} aria-label={hide ? 'Show balance' : 'Hide balance'}><Icon n={hide ? 'eyeoff' : 'eye'} s={16} /></button>
         </span>
-        <b>{hide ? '•••••••' : main ? num(main.balance, main.currency) : '₦' + ACCOUNT.balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}</b>
-        <span className="mb-chip">{main ? main.currency : ACCOUNT.currency} Account</span><span className="mb-chip">{main ? main.bank_name : ACCOUNT.type}</span>
+        <b>{hide ? '•••••••' : main ? num(main.balance, main.currency) : '₦0.00'}</b>
+        <span className="mb-chip">{main ? main.currency : 'NGN'} Account</span><span className="mb-chip">{main ? main.bank_name : 'No account yet'}</span>
         <div className="mb-acct">
-          <div><small>Account number</small><b>{number}</b></div>
-          <button className="mb-copy" onClick={copy}><Icon n={copied ? 'check' : 'copy'} s={14} />{copied ? 'Copied' : 'Copy'}</button>
+          <div><small>Account number</small><b>{number || 'Available after verification'}</b></div>
+          {number && <button className="mb-copy" onClick={copy}><Icon n={copied ? 'check' : 'copy'} s={14} />{copied ? 'Copied' : 'Copy'}</button>}
         </div>
       </div>
 
@@ -67,12 +67,10 @@ export default function MyBankHome({ go, tx = [], money = (n) => n }) {
       </div>
 
       <div className="mb-intl">
-        <div className="mb-sec" style={{ padding: 0 }}><b>{real ? 'My other accounts' : 'International accounts'}</b><button className="mb-link" onClick={hash('#/accounts')}>View all</button></div>
+        <div className="mb-sec" style={{ padding: 0 }}><b>My other accounts</b><button className="mb-link" onClick={hash('#/accounts')}>View all</button></div>
         <div className="mb-pills">
-          {real
-            ? others.map((a) => <div className="mb-pill" key={a.id}>{CUR[a.currency].flag} {a.currency}<b>{hide ? '••••' : num(a.balance, a.currency)}</b><small>{a.account_number}</small></div>)
-            : INTL_ACCOUNTS.map((a) => <div className="mb-pill" key={a.cur}>{a.flag} {a.cur}<b>{hide ? '••••' : fmtMoney(a.balance, a.symbol)}</b></div>)}
-          {real && others.length === 0 && <div className="mb-pill">No other accounts yet</div>}
+          {others.map((a) => <div className="mb-pill" key={a.id}>{CUR[a.currency] ? CUR[a.currency].flag : ''} {a.currency}<b>{hide ? '••••' : num(a.balance, a.currency)}</b><small>{a.account_number}</small></div>)}
+          {others.length === 0 && <div className="mb-pill">No other accounts yet</div>}
         </div>
       </div>
 
