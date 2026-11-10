@@ -3,9 +3,9 @@
 // Paths below come from Maplerad's public docs/reference (maplerad.dev):
 //   POST   /customers                    create customer (tier 0)
 //   PATCH  /customers/upgrade/tier1      upgrade to tier 1
-//   POST   /collections/virtual-account  create NGN virtual (NUBAN) account
-// NOT yet confirmed against the sandbox: the auth header scheme (default Bearer), the sandbox base URL, and the
-// exact response shapes (parsed defensively in pick()). Confirm each one with your first sandbox calls.
+//   POST   /collections/virtual-account  create a virtual account (NGN documented; USD documented as a separate product page)
+// NOT yet confirmed against the sandbox: the auth header scheme (default Bearer), the sandbox base URL, the exact
+// response shapes (parsed defensively in pick()), and whether USD accounts use this same endpoint/tier.
 //
 // Secrets (supabase secrets set ...): MAPLERAD_SECRET_KEY, MAPLERAD_BASE_URL, optional MAPLERAD_AUTH_SCHEME.
 
@@ -70,7 +70,7 @@ export async function createCustomer(i: { first_name: string; last_name: string;
 export async function upgradeTier1(i: {
   customer_id: string;
   dob: string; // DD-MM-YYYY per Maplerad docs
-  identification_number: string; // BVN
+  identification_number: string; // BVN for Nigeria; national ID/passport number elsewhere (confirm in sandbox)
   phone: { phone_country_code: string; phone_number: string };
   address: { street: string; street2: string | null; city: string; state: string; country: string; postal_code: string };
   photo?: string;
@@ -78,21 +78,20 @@ export async function upgradeTier1(i: {
   await call("PATCH", "/customers/upgrade/tier1", i);
 }
 
-export async function createNgnVirtualAccount(customer_id: string, preferred_bank?: string) {
+export async function createVirtualAccount(customer_id: string, currency: string, preferred_bank?: string) {
   const r = await call("POST", "/collections/virtual-account", {
     customer_id,
-    currency: "NGN",
+    currency,
     ...(preferred_bank ? { preferred_bank } : {}),
   });
   const account_number = pick(r, "data.account_number", "data.accountNumber", "account_number");
   const bank_name = pick(r, "data.bank_name", "data.bankName", "bank_name");
+  const account_name = pick(r, "data.account_name", "data.accountName", "account_name");
+  const routing_code = pick(r, "data.routing_number", "data.routingNumber", "data.routing_code", "data.sort_code");
   const reference = pick(r, "data.id", "data.reference", "id");
   if (typeof account_number !== "string" || !/^[0-9]{6,20}$/.test(account_number)) {
     throw new MapleradError("Unexpected response creating virtual account", 502);
   }
-  return {
-    account_number,
-    bank_name: typeof bank_name === "string" ? bank_name : null,
-    reference: typeof reference === "string" ? reference : null,
-  };
+  const s = (v: unknown) => (typeof v === "string" ? v : null);
+  return { account_number, bank_name: s(bank_name), account_name: s(account_name), routing_code: s(routing_code), reference: s(reference) };
 }
