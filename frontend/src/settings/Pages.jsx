@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../auth/supabase.js';
 import { CUR, ORDER, loadSettings, saveSettings, DEFAULT_SETTINGS } from '../transfer/common.js';
-import { submitKyc } from '../kycApi.js';
+import { submitKyc, submitKycTier3 } from '../kycApi.js';
 import PinChange from './PinChange.jsx';
 import '../transfer/transfer.css';
 import '../transfer/wallets.css';
@@ -201,9 +201,12 @@ export function Currency() {
 }
 
 /* ---------- Verification (KYC) ---------- */
+// Level 1 = normal (email + phone, everyone). Level 2 = BVN (free account number). Level 3 = NIN + ID.
+// These amounts are display text only; they are not enforced by the database yet.
 const LIMITS = { 1: '₦50,000 per day', 2: '₦200,000 per day', 3: '₦5,000,000 per day' };
 const STATUS = { not_started: ['Not started', 'warn'], pending: ['Under review', 'warn'], verified: ['Verified', ''], rejected: ['Rejected', 'bad'], additional_info_required: ['More info needed', 'warn'] };
-const ID_TYPES = ['National ID (NIN slip)', "Driver's licence", 'International passport', "Voter's card"];
+const ID_TYPES_NG = ['National ID (NIN slip)', "Driver's licence", 'International passport', "Voter's card"];
+const ID_TYPES_OTHER = ['International passport', "Driver's licence", 'National ID card'];
 // Calling codes for the countries we can open accounts in. A country missing here cannot verify yet.
 const CALLING = { NG: '234', US: '1' };
 // National number only: strip spaces/symbols, a leading country code (when the number is clearly too long) and Nigeria's leading 0.
@@ -217,20 +220,22 @@ const nationalPhone = (v, cc) => {
 export function Kyc() {
   const u = useAuth();
   const [ver, setVer] = useState(undefined);
-  const [sub, setSub] = useState(null);
+  const [sub, setSub] = useState({});
   const [countries, setCountries] = useState([['NG', 'Nigeria']]);
-  const [wiz, setWiz] = useState(false);
+  const [wiz, setWiz] = useState(null); // null | 'l2' (BVN) | 'l3' (NIN + ID)
   const [step, setStep] = useState(1);
-  const [f, setF] = useState({ bvn: '', nin: '', idType: ID_TYPES[0], idNo: '', name: '', dob: '', phone: '', address: '', city: '', region: '', postal: '', country: 'NG', ok: false });
+  const [f, setF] = useState({ bvn: '', nin: '', idType: ID_TYPES_NG[0], idNo: '', name: '', dob: '', phone: '', address: '', city: '', region: '', postal: '', country: 'NG', ok: false });
   const [err, setErr] = useState(''); const [busy, setBusy] = useState(false);
   const set = k => e => setF({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value });
   const isNG = f.country === 'NG';
+  const idTypes = isNG ? ID_TYPES_NG : ID_TYPES_OTHER;
 
   const load = async () => {
     const { data: v } = await supabase.from('customer_verifications').select('*').eq('user_id', u.id).maybeSingle();
-    setVer(v || { status: 'not_started' });
-    const { data: k } = await supabase.from('kyc_submissions').select('bvn_last4,nin_last4,id_type').eq('user_id', u.id).order('created_at', { ascending: false }).limit(1);
-    setSub(k && k[0]);
+    setVer(v || { status: 'not_started', kyc_tier: 1 });
+    const { data: k } = await supabase.from('kyc_submissions').select('bvn_last4,nin_last4,id_type').eq('user_id', u.id).order('created_at', { ascending: false }).limit(5);
+    const pickLast = key => { const r = (k || []).find(x => x[key]); return r ? r[key] : null; };
+    setSub({ bvn_last4: pickLast('bvn_last4'), nin_last4: pickLast('nin_last4') });
     const { data: p } = await supabase.from('profiles').select('full_name,phone').eq('id', u.id).maybeSingle();
     setF(x => ({ ...x, name: x.name || (v && v.legal_name) || (p && p.full_name) || '', phone: x.phone || (p && p.phone) || '' }));
     // Only countries we can actually open accounts in (Maplerad-supported, from country_account_catalog).
@@ -240,16 +245,15 @@ export function Kyc() {
   useEffect(() => { if (u) load(); }, [u]);
 
   const status = ver ? ver.status : 'not_started';
-  const level = status === 'verified' ? 3 : 1;
+  const tier = status === 'verified' ? (ver.kyc_tier || 2) : 1;
+  const homeCountry = (ver && ver.country_of_residence) || 'NG';
+
   const next = () => {
     setErr('');
     if (step === 1) {
       if (!CALLING[f.country]) return setErr('We cannot verify customers in this country yet.');
-      if (isNG) {
-        if (!/^\d{11}$/.test(f.bvn)) return setErr('BVN must be 11 digits.');
-        if (!/^\d{11}$/.test(f.nin)) return setErr('NIN must be 11 digits.');
-      }
-      if (f.idNo.trim().length < 5) return setErr('Enter your ID number.');
+      if (isNG && !/^\d{11}$/.test(f.bvn)) return setErr('BVN must be 11 digits.');
+      if (!isNG && f.idNo.trim().length < 5) return setErr('Enter your ID number.');
     }
     if (step === 2) {
       if (f.name.trim().length < 3) return setErr('Enter your full legal name.');
@@ -259,51 +263,77 @@ export function Kyc() {
     }
     setStep(step + 1);
   };
-  const submit = async () => {
+
+  // Level 2: BVN (or ID number outside Nigeria). Issues the free account number.
+  const submitL2 = async () => {
     setErr('');
     if (f.address.trim().length < 5) return setErr('Enter your residential address.');
     if (!f.ok) return setErr('Please confirm the details are correct.');
     setBusy(true);
-    let error = null;
     try {
-      // Real verification: banking partner (Maplerad) via the kyc-submit Edge Function.
       await submitKyc(supabase, {
         country: f.country, legal_name: f.name, date_of_birth: f.dob,
-        ...(isNG ? { bvn: f.bvn } : {}), id_number: f.idNo.trim(),
+        ...(isNG ? { bvn: f.bvn } : { id_number: f.idNo.trim() }),
         phone_country_code: '+' + CALLING[f.country], phone_number: nationalPhone(f.phone, f.country),
         address: { street: f.address, city: f.city, state: f.region, postal_code: f.postal },
       });
-    } catch (e) {
-      if ((e.code === 'provider_not_configured' || e.code === 'function_unavailable') && isNG) {
-        // Partner not set up yet: the database decides (demo mode verifies instantly, production refuses).
-        const r = await supabase.rpc('submit_my_kyc', { p_legal_name: f.name, p_dob: f.dob, p_address: f.address, p_city: f.city, p_region: f.region, p_postal: f.postal, p_country: f.country, p_id_type: f.idType, p_id_number: f.idNo, p_bvn: f.bvn, p_nin: f.nin });
-        error = r.error;
-      } else error = e;
-    }
-    setBusy(false);
-    if (error) { setErr(error.message); load(); return; }
-    setWiz(false); setStep(1); load();
+      setWiz(null); setStep(1);
+    } catch (e) { setErr(e.message); }
+    setBusy(false); load();
+  };
+
+  // Level 3: NIN + government ID.
+  const submitL3 = async () => {
+    setErr('');
+    if (!/^\d{11}$/.test(f.nin)) return setErr('NIN must be 11 digits.');
+    if (f.idNo.trim().length < 5) return setErr('Enter your ID number.');
+    if (!f.ok) return setErr('Please confirm the details are correct.');
+    setBusy(true);
+    try {
+      await submitKycTier3(supabase, { nin: f.nin, id_type: f.idType, id_number: f.idNo.trim() });
+      setWiz(null);
+    } catch (e) { setErr(e.message); }
+    setBusy(false); load();
   };
   const st = STATUS[status] || STATUS.not_started;
 
-  if (wiz) {
+  if (wiz === 'l3') {
     return (
-      <Gate u={u} title="Verify your identity" onBack={() => { if (step > 1) setStep(step - 1); else setWiz(false); }}>
-        <div className="st-steps">{[1, 2, 3].map(i => <i key={i} className={i <= step ? 'on' : ''} />)}</div>
-        {step === 1 && <div className="ot-card">
-          <b>Step 1 of 3 · Identity</b>
-          <label className="ot-lab" style={{ marginTop: 10 }}>Country you live in</label>
-          <select className="st-sel" value={f.country} onChange={set('country')}>{countries.map(([c, n]) => <option key={c} value={c}>{n}</option>)}</select>
-          {isNG && <>
-            <label className="ot-lab">BVN (11 digits)</label>
-            <input className="ot-input" inputMode="numeric" maxLength={11} value={f.bvn} onChange={e => setF({ ...f, bvn: e.target.value.replace(/\D/g, '') })} />
-            <label className="ot-lab">NIN (11 digits)</label>
-            <input className="ot-input" inputMode="numeric" maxLength={11} value={f.nin} onChange={e => setF({ ...f, nin: e.target.value.replace(/\D/g, '') })} />
-          </>}
+      <Gate u={u} title="Level 3 verification" onBack={() => setWiz(null)}>
+        <div className="ot-card">
+          <b>NIN and government ID</b>
+          <label className="ot-lab" style={{ marginTop: 10 }}>NIN (11 digits)</label>
+          <input className="ot-input" inputMode="numeric" maxLength={11} value={f.nin} onChange={e => setF({ ...f, nin: e.target.value.replace(/\D/g, '') })} />
           <label className="ot-lab">ID type</label>
-          <select className="st-sel" value={f.idType} onChange={set('idType')}>{ID_TYPES.map(t => <option key={t}>{t}</option>)}</select>
+          <select className="st-sel" value={f.idType} onChange={set('idType')}>{ID_TYPES_NG.map(t => <option key={t}>{t}</option>)}</select>
           <label className="ot-lab">ID number</label>
           <input className="ot-input" value={f.idNo} onChange={set('idNo')} />
+          <label className="st-check"><input type="checkbox" checked={f.ok} onChange={set('ok')} /><span>I confirm these details are correct.</span></label>
+        </div>
+        {err && <p className="ot-err" role="alert">{err}</p>}
+        <button className="ot-btn" disabled={busy} onClick={submitL3}>{busy ? 'Submitting...' : 'Verify Level 3'}</button>
+        <p className="ot-demo">Your NIN and ID number are sent securely to our banking partner and are not stored by Glade Bank.</p>
+      </Gate>
+    );
+  }
+
+  if (wiz === 'l2') {
+    return (
+      <Gate u={u} title="Level 2 verification" onBack={() => { if (step > 1) setStep(step - 1); else setWiz(null); }}>
+        <div className="st-steps">{[1, 2, 3].map(i => <i key={i} className={i <= step ? 'on' : ''} />)}</div>
+        {step === 1 && <div className="ot-card">
+          <b>Step 1 of 3 · {isNG ? 'BVN' : 'Identity'}</b>
+          <label className="ot-lab" style={{ marginTop: 10 }}>Country you live in</label>
+          <select className="st-sel" value={f.country} onChange={e => setF({ ...f, country: e.target.value, idType: (e.target.value === 'NG' ? ID_TYPES_NG : ID_TYPES_OTHER)[0] })}>{countries.map(([c, n]) => <option key={c} value={c}>{n}</option>)}</select>
+          {isNG ? <>
+            <label className="ot-lab">BVN (11 digits)</label>
+            <input className="ot-input" inputMode="numeric" maxLength={11} value={f.bvn} onChange={e => setF({ ...f, bvn: e.target.value.replace(/\D/g, '') })} />
+          </> : <>
+            <label className="ot-lab">ID type</label>
+            <select className="st-sel" value={f.idType} onChange={set('idType')}>{idTypes.map(t => <option key={t}>{t}</option>)}</select>
+            <label className="ot-lab">ID number</label>
+            <input className="ot-input" value={f.idNo} onChange={set('idNo')} />
+          </>}
         </div>}
         {step === 2 && <div className="ot-card">
           <b>Step 2 of 3 · Personal details</b>
@@ -327,21 +357,25 @@ export function Kyc() {
           <label className="st-check"><input type="checkbox" checked={f.ok} onChange={set('ok')} /><span>I confirm these details are correct.</span></label>
         </div>}
         {err && <p className="ot-err" role="alert">{err}</p>}
-        {step < 3 ? <button className="ot-btn" onClick={next}>Continue</button> : <button className="ot-btn" disabled={busy} onClick={submit}>{busy ? 'Submitting...' : 'Submit for verification'}</button>}
-        <p className="ot-demo">Your ID numbers are sent securely to our banking partner and are not stored by Glade Bank. After verification you get a free account number for your country.</p>
+        {step < 3 ? <button className="ot-btn" onClick={next}>Continue</button> : <button className="ot-btn" disabled={busy} onClick={submitL2}>{busy ? 'Submitting...' : 'Verify Level 2'}</button>}
+        <p className="ot-demo">Your BVN or ID number is sent securely to our banking partner and is not stored by Glade Bank. After this step you get a free account number for your country.</p>
       </Gate>
     );
   }
 
-  const tiers = [[1, 'Level 1 · Basic', 'Email and phone number', true], [2, 'Level 2 · BVN and NIN', 'Confirm your BVN and NIN', status === 'verified'], [3, 'Level 3 · ID and address', 'Government ID and proof of address', status === 'verified']];
+  const tiers = [
+    [1, 'Level 1 · Normal', 'Sign up with your email and phone number', true],
+    [2, 'Level 2 · BVN', 'BVN, date of birth and address. Gives you your free account number', tier >= 2],
+    [3, 'Level 3 · NIN and ID', 'NIN and government ID for the highest limits', tier >= 3],
+  ];
   return (
     <Gate u={u} title="Verification Status">
       {ver === undefined ? <p className="ot-mut">Loading...</p> : <>
         <div className="ot-card ot-center" style={{ padding: 22 }}>
           <div className="ot-check" style={{ margin: '0 auto 8px', background: status === 'verified' ? undefined : '#f59e0b' }}>{status === 'verified' ? '✓' : '!'}</div>
           <span className={'st-tag ' + st[1]}>{st[0]}</span>
-          <h3 style={{ margin: '10px 0 4px' }}>Level {level} account</h3>
-          <p className="ot-mut" style={{ margin: 0 }}>Daily limit: {LIMITS[level]}</p>
+          <h3 style={{ margin: '10px 0 4px' }}>Level {tier} account</h3>
+          <p className="ot-mut" style={{ margin: 0 }}>Daily limit: {LIMITS[tier]}</p>
           {(status === 'rejected' || status === 'additional_info_required') && ver.rejection_reason && <p className="ot-err">{ver.rejection_reason}</p>}
         </div>
         {tiers.map(([n, t, d, done]) => <div key={n} className={'st-tier' + (done ? ' done' : '')}><span className="n">{done ? '✓' : n}</span><div><b>{t}</b><small>{d}</small><small>Limit: {LIMITS[n]}</small></div></div>)}
@@ -350,12 +384,14 @@ export function Kyc() {
             <div className="ot-kv"><span>Legal name</span><b>{ver.legal_name}</b></div>
             {ver.date_of_birth && <div className="ot-kv"><span>Date of birth</span><b>{ver.date_of_birth}</b></div>}
             {ver.address_line1 && <div className="ot-kv"><span>Address</span><b>{[ver.address_line1, ver.city, ver.region].filter(Boolean).join(', ')}</b></div>}
-            {sub && sub.bvn_last4 && <div className="ot-kv"><span>BVN</span><b>*******{sub.bvn_last4}</b></div>}
-            {sub && sub.nin_last4 && <div className="ot-kv"><span>NIN</span><b>*******{sub.nin_last4}</b></div>}
+            {sub.bvn_last4 && <div className="ot-kv"><span>BVN</span><b>*******{sub.bvn_last4}</b></div>}
+            {sub.nin_last4 && <div className="ot-kv"><span>NIN</span><b>*******{sub.nin_last4}</b></div>}
           </div>
         )}
         {status === 'pending' && <p className="ot-mut" style={{ textAlign: 'center' }}>We're reviewing your details. You'll be notified when it's done.</p>}
-        {status !== 'verified' && status !== 'pending' && <button className="ot-btn" onClick={() => { setWiz(true); setStep(1); setErr(''); }}>{status === 'not_started' ? 'Start verification' : 'Update and resubmit'}</button>}
+        {status !== 'verified' && status !== 'pending' && <button className="ot-btn" onClick={() => { setWiz('l2'); setStep(1); setErr(''); }}>{status === 'not_started' ? 'Start Level 2 (BVN)' : 'Update and resubmit Level 2'}</button>}
+        {status === 'verified' && tier < 3 && homeCountry === 'NG' && <button className="ot-btn" onClick={() => { setWiz('l3'); setErr(''); setF(x => ({ ...x, ok: false, idNo: '' })); }}>Upgrade to Level 3 (NIN)</button>}
+        {status === 'verified' && tier < 3 && homeCountry !== 'NG' && <p className="ot-mut" style={{ textAlign: 'center' }}>Level 3 is not available in your country yet.</p>}
       </>}
     </Gate>
   );
