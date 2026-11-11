@@ -3,12 +3,12 @@ import MyBankHome from './mybank/MyBankHome.jsx';
 import AdminCards from './cards/AdminCards.jsx';
 import { Icon } from './mybank/icons.jsx';
 import { INTL_ACCOUNTS } from './mybank/accounts.js';
-import { loadAccounts } from './transfer/common.js';
+import { loadAccounts, brand } from './transfer/common.js';
 import { supabase } from './auth/supabase.js';
 import { CODES, COUNTRIES, FLAG, rateFor, currencyOfCountry } from './currencies.js';
 import './mybank/mybank.css';
 
-// GLADE BANK — UI MOCKUP. Local demo data only. No backend calls.
+// GLADE — UI MOCKUP. Local demo data only. No backend calls.
 // Currencies, countries and (placeholder) rates live in ./currencies.js
 // No sample transactions. Real transactions come from the ledger once they are wired in.
 const TX = [];
@@ -16,7 +16,7 @@ const money = (n, c) => (n < 0 ? '-' : '+') + (c === 'NGN' ? '₦' : '$') + Math
 const FROM = ['NGN ••••6789 (Savings)', ...INTL_ACCOUNTS.map(a => a.cur + ' ••••' + a.number.slice(-4))];
 const ratio = (to, from) => { const a = rateFor(to), b = rateFor(from); return a && b ? a / b : 0; };
 
-const Logo = ({ sub }) => <div className="logo"><svg width="34" height="34" viewBox="0 0 40 40"><circle cx="20" cy="20" r="19" fill="#0f7a3d" /><text x="20" y="28" textAnchor="middle" fontSize="24" fontWeight="800" fill="#fff">G</text></svg><span>GLADE BANK{sub && <small>{sub}</small>}</span></div>;
+const Logo = ({ sub }) => <div className="logo"><svg width="34" height="34" viewBox="0 0 40 40"><circle cx="20" cy="20" r="19" fill="#0f7a3d" /><text x="20" y="28" textAnchor="middle" fontSize="24" fontWeight="800" fill="#fff">G</text></svg><span>GLADE{sub && <small>{sub}</small>}</span></div>;
 const Fld = ({ l, ic, opts, ...p }) => <label className="field"><span>{l}</span><div className="inp">{ic && <i>{ic}</i>}{opts ? <select {...p}>{opts.map(o => <option key={o}>{o}</option>)}</select> : <input {...p} />}</div></label>;
 const Steps = ({ n, t }) => <div className="steps">{Array.from({ length: t }, (_, i) => <React.Fragment key={i}>{i > 0 && <div className={'l ' + (i < n ? 'on' : '')} />}<div className={'s ' + (i < n ? 'on' : '')}>{i + 1}</div></React.Fragment>)}</div>;
 const Top = ({ t, go, to = 'home', bell = true }) => <div className="top"><button className="back" onClick={() => go(to)}>←</button><h2>{t}</h2>{bell ? <button className="back" onClick={() => go('notifs')}>🔔</button> : <span />}</div>;
@@ -24,15 +24,15 @@ const Banner = () => <div className="demo">DEMO MODE — simulated data, no real
 
 function Welcome({ go }) {
   return <div className="welcome"><div className="top" style={{ padding: 0 }}><Logo /><span>☰</span></div><h1>Bank Smarter.<br />Live Better.</h1><p style={{ opacity: .85 }}>Send money, receive payments, invest and grow — all in one place.</p>
-    <button className="btn" onClick={() => go('reg')}>Get Started →</button><p>Already have an account? <a href="#/login" style={{ color: '#7be0a3' }}>Sign in</a></p>
+    <button className="btn" onClick={() => go('reg')}>Get Started →</button><p>Already have an account? <a href="#/login" style={{ color: '#e8c547' }}>Sign in</a></p>
     <div className="badges"><div><i>🛡</i>Licensed & Regulated</div><div><i>🔒</i>256-bit Encryption</div><div><i>🌍</i>Global Coverage</div></div>
-    <a href="#" style={{ color: '#9fb4e6', textAlign: 'center', marginTop: 16, fontSize: 12 }} onClick={e => { e.preventDefault(); go('admin'); }}>Open Admin Console (mockup)</a></div>;
+    <a href="#" style={{ color: '#c9b97a', textAlign: 'center', marginTop: 16, fontSize: 12 }} onClick={e => { e.preventDefault(); go('admin'); }}>Open Admin Console (mockup)</a></div>;
 }
 
 function Register({ go }) {
   const [s, setS] = useState(1);
   const L = ['Personal', 'Address', 'Verify'];
-  return <><Top t="Create Your Account" go={go} to="welcome" bell={false} /><div className="pad"><p style={{ textAlign: 'center', color: 'var(--mut)', margin: 0 }}>Join Glade Bank today</p><Steps n={s} t={3} /><p style={{ textAlign: 'center', fontSize: 12, margin: '-8px 0 8px' }}>{L[s - 1]}</p>
+  return <><Top t="Create Your Account" go={go} to="welcome" bell={false} /><div className="pad"><p style={{ textAlign: 'center', color: 'var(--mut)', margin: 0 }}>Join Glade today</p><Steps n={s} t={3} /><p style={{ textAlign: 'center', fontSize: 12, margin: '-8px 0 8px' }}>{L[s - 1]}</p>
     {s === 1 && <><b>Personal Information</b><Fld l="First Name *" ic="👤" /><Fld l="Middle Name" ic="👤" /><Fld l="Last Name *" ic="👤" /><Fld l="Email Address *" ic="✉" type="email" /><Fld l="Phone Number *" ic="📞" /><Fld l="Date of Birth" ic="📅" type="date" /><Fld l="Gender" ic="⚥" opts={['Select Gender', 'Male', 'Female']} /><Fld l="Nationality" ic="🇳🇬" opts={['Nigeria', 'Ghana', 'UK', 'USA']} /><Fld l="Occupation" ic="💼" opts={['Select Occupation', 'Employed', 'Self-employed', 'Student']} /></>}
     {s === 2 && <><b>Address</b><Fld l="Country" opts={['Nigeria', 'USA', 'UK']} /><Fld l="State / Province" /><Fld l="City" /><Fld l="Postal code" /><Fld l="Residential address" /><b>Next of kin</b><Fld l="Full name" /><Fld l="Email" /><Fld l="Phone" /><Fld l="Relationship" /></>}
     {s === 3 && <><div style={{ textAlign: 'center' }}><div style={{ fontSize: 44 }}>🛡</div><b style={{ fontSize: 20 }}>NIN & BVN Enrollment</b><p style={{ color: 'var(--mut)' }}>Complete your identity verification</p></div>
@@ -70,7 +70,7 @@ function Benef({ go }) {
 
 function Invest({ go }) {
   const P = [['Premium Plan', 15, 10000, 12], ['Gold Plan', 20, 50000, 24]], [sel, setSel] = useState(null), [amt, setAmt] = useState(0), [ok, setOk] = useState(false);
-  return <><Top t="Investments" go={go} /><div className="pad"><div className="promo"><div><small>Glade Investments</small><br /><b style={{ fontSize: 20 }}>Grow Your Wealth with Glade Bank</b><br /><small>Up to 15% Annual Return (projected)</small></div><span>🪙</span></div><span className="tag w">All figures simulated · projected ≠ earned</span>
+  return <><Top t="Investments" go={go} /><div className="pad"><div className="promo"><div><small>Glade Investments</small><br /><b style={{ fontSize: 20 }}>Grow Your Wealth with Glade</b><br /><small>Up to 15% Annual Return (projected)</small></div><span>🪙</span></div><span className="tag w">All figures simulated · projected ≠ earned</span>
     <div className="row" style={{ border: 0 }}><b className="g">Investment Plans</b><a href="#">View All →</a></div>
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>{P.map(p => <div className="card" key={p[0]}><b>{p[0]}</b><br />{p[1]}% Annual Return<br /><small>Min: ₦{p[2].toLocaleString()}<br />Duration: {p[3]} Months</small><button className="btn sm" style={{ marginTop: 8, width: '100%' }} onClick={() => { setSel(p); setAmt(p[2]); setOk(false); }}>Invest Now</button></div>)}</div>
     {sel && <div className="card"><b>{sel[0]}</b><Fld l="Amount (₦)" type="number" value={amt} onChange={e => setAmt(+e.target.value)} />Projected: ₦{Math.round(amt * sel[1] / 100).toLocaleString()} / yr<button className="btn" onClick={() => setOk(true)}>Confirm Investment</button>{ok && <p className="pos">✓ Simulated investment active. Withdrawal needs admin approval.</p>}</div>}</div></>;
@@ -99,7 +99,7 @@ function Receive({ go }) {
   return <><Top t="Receive Money" go={go} /><div className="pad">
     {!r && <p>Loading…</p>}
     {r && !a && <p>You don't have an account yet. Your account details will appear here once your identity is verified and our banking partner issues your account.</p>}
-    {a && <><div className="card" style={{ marginTop: 10 }}>{holder && <div className="kv"><span>Holder</span><b>{holder}</b></div>}<div className="kv"><span>Bank</span><b>{a.bank_name || 'Glade Bank'}</b></div><div className="kv"><span>Account</span><b>{a.account_number || 'Pending'}</b></div><div className="kv"><span>Currency</span><b>{a.currency}</b></div></div>
+    {a && <><div className="card" style={{ marginTop: 10 }}>{holder && <div className="kv"><span>Holder</span><b>{holder}</b></div>}<div className="kv"><span>Provider</span><b>{brand(a.bank_name)}</b></div><div className="kv"><span>Account</span><b>{a.account_number || 'Pending'}</b></div><div className="kv"><span>Currency</span><b>{a.currency}</b></div></div>
       {a.account_number && <button className="btn" onClick={() => navigator.clipboard?.writeText(a.account_number)}>Copy details</button>}</>}
   </div></>;
 }
