@@ -11,7 +11,7 @@ function Shell({ title, sub, children, foot }) {
   return (
     <div className="op">
       <div className="op-card">
-        <div className="op-logo"><span>G</span>Glade Bank</div>
+        <div className="op-logo"><span>G</span>Glade</div>
         <h1>{title}</h1>
         <p className="op-sub">{sub}</p>
         {children}
@@ -56,7 +56,7 @@ export function Login() {
 
   return (
     <Shell title="Log in" sub="Welcome back. Enter your details to continue."
-      foot={<>New to Glade Bank? <a href="#/signup">Sign up</a></>}>
+      foot={<>New to Glade? <a href="#/signup">Sign up</a></>}>
       <form onSubmit={submit}>
         <Input label="Email" type="email" autoComplete="email" placeholder="you@example.com" value={f.email} onChange={set('email')} />
         <Password label="Password" autoComplete="current-password" placeholder="Enter password" value={f.password} onChange={set('password')} />
@@ -123,7 +123,7 @@ export function Signup() {
   }
 
   return (
-    <Shell title="Create account" sub="Open your Glade Bank account in a minute."
+    <Shell title="Create account" sub="Open your Glade account in a minute."
       foot={<>Already have an account? <a href="#/login">Log in</a></>}>
       <form onSubmit={submit}>
         <Input label="Full name" autoComplete="name" placeholder="As on your ID" value={f.name} onChange={set('name')} />
