@@ -5,6 +5,8 @@ import './auth.css';
 // Base App reads this key on mount to decide which screen to open.
 const goHome = () => { sessionStorage.setItem('gb', 'home'); location.hash = '#/'; };
 
+const DUP_MSG = 'An account with this email already exists. Log in instead, or use a different email.';
+
 function Shell({ title, sub, children, foot }) {
   return (
     <div className="op">
@@ -73,6 +75,15 @@ export function Signup() {
   const [ok, setOk] = useState(false);
   const set = k => e => setF({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value });
 
+  // Asks the database whether this inbox already has an account. Gmail dots, +tags and
+  // googlemail.com are treated as the same mailbox (see migration 20261111120000).
+  // Returns true / false, or null if the check could not run (the database trigger still enforces it).
+  const emailIsFree = async email => {
+    const { data, error } = await supabase.rpc('email_available', { p_email: email });
+    if (error) { console.warn('email_available check failed', error.message); return null; }
+    return data === true;
+  };
+
   const submit = async e => {
     e.preventDefault();
     if (!f.name.trim()) return setMsg('Enter your full name.');
@@ -81,13 +92,23 @@ export function Signup() {
     if (f.password !== f.confirm) return setMsg('Passwords do not match.');
     if (!f.agree) return setMsg('Accept the terms to continue.');
     setBusy(true); setMsg('');
+
+    const free = await emailIsFree(f.email.trim());
+    if (free === false) { setBusy(false); return setMsg(DUP_MSG); }
+
     const { data, error } = await supabase.auth.signUp({
       email: f.email.trim(),
       password: f.password,
       options: { data: { full_name: f.name.trim(), phone: f.phone.trim() } },
     });
     setBusy(false);
-    if (error) return setMsg(error.message);
+    if (error) {
+      // The database trigger rejects a second account on the same inbox; Supabase wraps it in a generic message.
+      if (/already|registered|database error saving new user/i.test(error.message)) return setMsg(DUP_MSG);
+      return setMsg(error.message);
+    }
+    // With email confirmation on, Supabase hides existing emails by returning a user with no identities.
+    if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) return setMsg(DUP_MSG);
     if (data.session) return goHome();
     setOk(true);
   };
