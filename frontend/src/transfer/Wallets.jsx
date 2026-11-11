@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../auth/supabase.js';
-import { CUR, ORDER, fmt, spaced, loadAccounts } from './common.js';
+import { CUR, ORDER, PARTNER, COMING_SOON, brand, fmt, spaced, loadAccounts } from './common.js';
 import './transfer.css';
 import './wallets.css';
 
@@ -8,6 +8,8 @@ const REGION = { africa: 'Africa', europe: 'Europe', americas: 'the Americas', a
 const when = d => new Date(d).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
 
 // My Accounts: every currency account has its own account number and can receive money at any time.
+// Brand shown to customers is "Glade". The licensed partner institution behind each account is disclosed
+// ("Provided by ...") as soon as it is set in PARTNER (common.js).
 export default function Wallets() {
   const [user, setUser] = useState(undefined);
   const [accts, setAccts] = useState([]);
@@ -48,6 +50,7 @@ export default function Wallets() {
   const missing = ORDER.filter(c => !accts.some(a => a.currency === c));
   const holder = (user.user_metadata && user.user_metadata.full_name) || user.email;
   const f = fee && fee.fee;
+  const partnerNote = { margin: '8px 2px 0', fontSize: 12, color: 'var(--mut)' };
 
   return (
     <div className="ot"><div className="ot-wrap">
@@ -64,9 +67,10 @@ export default function Wallets() {
             <div className="wl-bal">{fmt(a.balance, a.currency)}</div>
           </div>
           <div className="wl-num">
-            <div><small>{a.bank_name} account number</small><b>{spaced(a.account_number)}</b></div>
+            <div><small>{brand(a.bank_name)} account number</small><b>{spaced(a.account_number)}</b></div>
             <button className="wl-copy" onClick={() => copy(a.account_number)}>{copied === a.account_number ? 'Copied' : 'Copy'}</button>
           </div>
+          {PARTNER[a.currency] && <p style={partnerNote}>Account provided by {PARTNER[a.currency]}</p>}
           <div className="wl-acts">
             <button className="fill" onClick={() => { setRecv(a); setMsg(''); setErr(''); }}>Receive</button>
             <a href="#/move">Move money</a>
@@ -93,19 +97,28 @@ export default function Wallets() {
         </>
       )}
 
+      <div className="wl-h">Coming soon</div>
+      <div className="ot-card">
+        {COMING_SOON.map(c => (
+          <div className="ot-kv" key={c.cur}><span>{c.flag} {c.country}</span><b>{c.cur} · soon</b></div>
+        ))}
+        <p className="ot-mut" style={{ margin: '8px 0 0', fontSize: 13 }}>We're adding more countries with licensed local partners. We'll tell you when accounts open.</p>
+      </div>
+
       {accts.length > 1 && <a className="ot-btn" href="#/move">Move money between my accounts</a>}
 
       {recv && (
         <div className="ot-sheet-bg" onClick={() => setRecv(null)}>
           <div className="ot-sheet" onClick={e => e.stopPropagation()}>
             <div className="ot-row"><h3>Receive {recv.currency}</h3><button className="ot-x" onClick={() => setRecv(null)}>✕</button></div>
-            <div className="ot-card" style={{ background: '#f4f6f5' }}>
+            <div className="ot-card" style={{ background: '#f7f3e6' }}>
               <div className="ot-kv"><span>Account name</span><b>{holder}</b></div>
-              <div className="ot-kv"><span>Bank</span><b>{recv.bank_name}</b></div>
+              <div className="ot-kv"><span>{PARTNER[recv.currency] ? 'Bank' : 'Provider'}</span><b>{PARTNER[recv.currency] || brand(recv.bank_name)}</b></div>
               <div className="ot-kv"><span>Account number</span><b>{recv.account_number}</b></div>
               <div className="ot-kv"><span>Currency</span><b>{CUR[recv.currency].flag} {recv.currency}</b></div>
               <div className="ot-kv"><span>Balance</span><b>{fmt(recv.balance, recv.currency)}</b></div>
             </div>
+            {PARTNER[recv.currency] && <p style={partnerNote}>{brand(recv.bank_name)} accounts are provided by {PARTNER[recv.currency]}. Tell senders to choose {PARTNER[recv.currency]} as the bank.</p>}
             <button className="ot-btn" onClick={() => copy(recv.account_number)}>{copied === recv.account_number ? 'Copied' : 'Copy account number'}</button>
             <div className="wl-sim">
               <p>Demo: simulate someone sending money to this account number.</p>
