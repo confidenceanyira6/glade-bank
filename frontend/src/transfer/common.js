@@ -8,6 +8,22 @@ export const CUR = {
   CAD: { flag: '🇨🇦', country: 'Canada', name: 'Canadian Dollar', sym: 'C$' },
 };
 export const ORDER = ['NGN', 'GBP', 'USD', 'EUR', 'CAD'];
+
+// Licensed partner institution behind each currency account. Shown to customers as "Provided by ...".
+// Leave '' until the partner confirms its name and branding in writing. Nothing is shown while empty.
+export const PARTNER = { NGN: '', GBP: '', USD: '', EUR: '', CAD: '' };
+
+// Countries Maplerad is reported to operate in that are NOT open yet (no accounts, no FX).
+// They show as "Coming soon" until the partner confirms accounts and the database supports the currency.
+export const COMING_SOON = [
+  { flag: '🇬🇭', country: 'Ghana', cur: 'GHS', name: 'Ghanaian Cedi' },
+  { flag: '🇰🇪', country: 'Kenya', cur: 'KES', name: 'Kenyan Shilling' },
+  { flag: '🇨🇲', country: 'Cameroon', cur: 'XAF', name: 'Central African CFA Franc' },
+];
+
+// "Glade Bank" is stored in the database; the app only shows the brand "Glade".
+export const brand = n => ((n || 'Glade').replace(/\s*bank$/i, '').trim() || 'Glade');
+
 export const fmt = (n, c) => ((CUR[c] && CUR[c].sym) || '') + Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 export const spaced = n => (n || '').replace(/(\d{3})(\d{3})(\d{4})/, '$1 $2 $3');
 
