@@ -1,18 +1,26 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { supabase } from '../auth/supabase.js';
 import './transfer.css';
 
 const BANKS = ['Glade Bank', 'Access Bank', 'GTBank', 'Zenith Bank', 'First Bank', 'UBA', 'OPay', 'Kuda', 'Moniepoint', 'PalmPay', 'Wema Bank', 'Sterling Bank', 'Fidelity Bank', 'Union Bank', 'Stanbic IBTC'];
+// Bank codes used by the name-enquiry service (edge function resolve-account). Glade Bank is looked up in our own database.
+const BANK_CODES = { 'Access Bank': '044', 'GTBank': '058', 'Zenith Bank': '057', 'First Bank': '011', 'UBA': '033', 'Wema Bank': '035', 'Sterling Bank': '232', 'Fidelity Bank': '070', 'Union Bank': '032', 'Stanbic IBTC': '221', 'Kuda': '50211', 'Moniepoint': '50515', 'OPay': '999992', 'PalmPay': '999991' };
 const QUICK = [1000, 2000, 5000, 10000, 20000, 50000];
 const money = n => '₦' + Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-// OPay-style "Transfer to Bank Account". Glade Bank accounts are looked up and credited for real;
-// the transaction PIN is checked on the server. Transfers to other banks are still simulated (no bank connection yet).
+// OPay-style "Transfer to Bank Account".
+// Name enquiry runs as soon as 10 digits are typed: Glade Bank accounts come from our database, accounts at other banks
+// from the resolve-account edge function (needs PAYSTACK_SECRET_KEY). With no bank picked, it works out the bank too.
+// The transaction PIN is asked AFTER the Confirm screen and checked on the server.
+// Transfers to other banks are still simulated (no real bank connection yet).
 export default function LocalTransfer() {
   const [step, setStep] = useState('form'); // form | confirm | pin | done
   const [acct, setAcct] = useState('');
   const [bank, setBank] = useState('');
-  const [found, setFound] = useState(null); // { name, bank } for Glade Bank accounts
+  const [found, setFound] = useState(null); // { name, bank } once the account is verified
+  const [choices, setChoices] = useState([]); // several banks matched this number: let the user pick
+  const [lookMsg, setLookMsg] = useState('');
+  const [verifier, setVerifier] = useState('unknown'); // unknown | on | off  (off = name service not set up / unreachable)
   const [manual, setManual] = useState('');
   const [looking, setLooking] = useState(false);
   const [amt, setAmt] = useState('');
@@ -25,6 +33,7 @@ export default function LocalTransfer() {
   const [bal, setBal] = useState(null);
   const [err, setErr] = useState('');
   const [res, setRes] = useState(null);
+  const lastKey = useRef('');
 
   const loadBal = async () => {
     const { data: s } = await supabase.auth.getSession();
@@ -34,30 +43,54 @@ export default function LocalTransfer() {
   };
   useEffect(() => { loadBal(); }, []);
 
-  // Name enquiry: runs as soon as 10 digits are typed.
+  const pick = (name, bankName) => {
+    lastKey.current = `${acct}|${bankName}`;
+    setFound({ name, bank: bankName });
+    setBank(bankName);
+    setChoices([]);
+    setLookMsg('');
+  };
+
+  // Name enquiry: runs as soon as 10 digits are typed (and again if the bank is changed).
   useEffect(() => {
-    setFound(null);
-    if (acct.length !== 10) return;
+    if (acct.length !== 10) { lastKey.current = ''; setFound(null); setChoices([]); setLookMsg(''); return; }
+    const key = `${acct}|${bank}`;
+    if (lastKey.current === key) return;
+    lastKey.current = key;
+    setFound(null); setChoices([]); setLookMsg('');
     let live = true;
     setLooking(true);
-    supabase.rpc('lookup_account', { p_account_number: acct }).then(({ data }) => {
+    (async () => {
+      // 1) Glade Bank account?
+      const { data } = await supabase.rpc('lookup_account', { p_account_number: acct });
+      if (!live) return;
+      if (data && data.found) { setLooking(false); return pick(data.name, data.bank); }
+      // 2) Account at another bank
+      const { data: r, error } = await supabase.functions.invoke('resolve-account', {
+        body: { account_number: acct, bank_code: BANK_CODES[bank] || undefined },
+      });
       if (!live) return;
       setLooking(false);
-      if (data && data.found) { setFound({ name: data.name, bank: data.bank }); setBank(data.bank); }
-    });
+      if (error || !r || r.error === 'not_configured' || (!r.ok && r.error !== 'not_found')) { setVerifier('off'); return; }
+      setVerifier('on');
+      if (!r.ok) return setLookMsg(bank ? `We couldn't find this account at ${bank}. Check the number or pick another bank.` : "We couldn't find this account. Check the number or pick the bank.");
+      if (r.matches.length === 1) return pick(r.matches[0].name, r.matches[0].bank_name);
+      setChoices(r.matches);
+    })();
     return () => { live = false; };
-  }, [acct]);
+  }, [acct, bank]);
 
   const name = found ? found.name : manual.trim().toUpperCase();
   const hint = acct.length === 0 ? '' : acct.length < 10 ? `Account numbers have 10 digits (${acct.length} entered).` : '';
-  const unverified = acct.length === 10 && !looking && !found && bank;
+  const unverified = acct.length === 10 && !looking && !found && !choices.length && verifier === 'off' && bank;
 
   const n = Number(amt);
   const next = () => {
     setErr('');
     if (acct.length !== 10) return setErr('Enter a 10-digit account number.');
+    if (choices.length) return setErr('Choose which bank this account is with.');
     if (!bank) return setErr('Select a bank.');
-    if (!name) return setErr(found ? 'Wait for the account name to load.' : 'Enter the account name.');
+    if (!name) return setErr(unverified ? 'Enter the account name.' : looking ? 'Wait for the account name to load.' : 'We could not verify this account. Check the number and bank.');
     if (!(n >= 100)) return setErr('Minimum transfer is ₦100.');
     if (bal !== null && n > bal) return setErr('Not enough balance for this transfer.');
     setStep('confirm');
@@ -103,7 +136,7 @@ export default function LocalTransfer() {
         </div>
         {res.kind === 'external_demo' && <p className="ot-demo">Demo: transfers to other banks are simulated. The money left your account but nothing was sent to a real bank.</p>}
         <a className="ot-btn" href="#/">Done</a>
-        <button className="ot-btn ot-alt" onClick={() => { setStep('form'); setAmt(''); setNote(''); setPin(''); setAcct(''); setBank(''); setManual(''); setRes(null); }}>Make another transfer</button>
+        <button className="ot-btn ot-alt" onClick={() => { setStep('form'); setAmt(''); setNote(''); setPin(''); setAcct(''); setBank(''); setManual(''); setRes(null); lastKey.current = ''; }}>Make another transfer</button>
       </div></div>
     );
   }
@@ -154,6 +187,13 @@ export default function LocalTransfer() {
         {hint && <div className="ot-name">{hint}</div>}
         {looking && <div className="ot-name">Verifying account...</div>}
         {found && <div className="ot-name ok">✓ {found.name}</div>}
+        {choices.length > 0 && <>
+          <div className="ot-name">This number matches more than one bank. Tap the right one:</div>
+          <div className="ot-chips" style={{ marginTop: 10 }}>
+            {choices.map(c => <button key={c.bank_code} onClick={() => pick(c.name, c.bank_name)}>{c.bank_name} · {c.name}</button>)}
+          </div>
+        </>}
+        {lookMsg && !found && !looking && <div className="ot-name">{lookMsg}</div>}
         {unverified && <>
           <div className="ot-name">We can't verify accounts at other banks yet. Enter the account name to continue.</div>
           <input className="ot-input" style={{ marginTop: 10 }} placeholder="Account name" value={manual} onChange={e => setManual(e.target.value)} />
