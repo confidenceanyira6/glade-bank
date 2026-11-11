@@ -1,103 +1,142 @@
-/* Black & gold theme (gold #d4af37 on black #0a0a0a). Loaded last so it restyles every page.
-   File name kept as theme-opay.css so main.jsx and imports don't change. */
-:root{--navy:#0a0a0a;--green:#d4af37;--g2:#e6c458;--grey:#f6f4ee;--ink:#0a0a0a;--mut:#7d776a;--red:#d93025;--gold:#d4af37;--gold-d:#b8941f;--gold-t:#fbf3d5;--gold-x:#7a5c00}
-body{background:#f6f4ee;font-family:"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;color:var(--ink)}
+/* Black & gold theme v2: metallic gold gradients + black accents. Loaded last so it restyles every page.
+   File name kept as theme-opay.css so main.jsx and imports don't change.
+   Gold gradient:  #fff1a8 -> #e8c547 -> #c9971c -> #a67c00   (flat accent #d4a62a)
+   Text-on-white gold: #8a6d0b / #7a5c00                       Black: #0a0a0a */
+:root{
+  --navy:#0a0a0a;--green:#d4a62a;--g2:#e8c547;--grey:#f7f3e6;--ink:#0a0a0a;--mut:#7d776a;--red:#d93025;
+  --gold:#d4a62a;--gold-d:#a67c00;--gold-t:#fbf3d5;--gold-x:#7a5c00;
+  --gold-grad:linear-gradient(135deg,#fff1a8 0%,#e8c547 28%,#c9971c 65%,#a67c00 100%);
+  --gold-grad-h:linear-gradient(90deg,#f3d567,#d4a62a 55%,#b8860b);
+}
+body{background:#f7f3e6;font-family:"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;color:var(--ink)}
 body a{color:var(--gold-x)}
-body .phone{background:#f6f4ee;box-shadow:none}
-body .demo{background:#0a0a0a;color:#d4af37}
-body .logo small{color:#b8941f}
-svg circle[fill="#0f7a3d"]{fill:#d4af37}
+body .phone{background:#f7f3e6;box-shadow:none}
+body .demo{background:var(--gold-grad-h);color:#0a0a0a;font-weight:600}
+body .logo small{color:#7a5c00}
+svg circle[fill="#0f7a3d"]{fill:#d4a62a}
 
-/* header */
-body .top{background:#0a0a0a;padding:14px 16px;margin-bottom:14px;position:sticky;top:0;z-index:4}
-body .top h2{font-size:18px;font-weight:700;color:#d4af37}
-body .back{color:#d4af37;font-size:24px}
-body .top .logo{color:#d4af37}
+/* header: gold bar with black text */
+body .top{background:var(--gold-grad-h);padding:14px 16px;margin-bottom:14px;position:sticky;top:0;z-index:4;box-shadow:0 2px 10px #a67c0033}
+body .top h2{font-size:18px;font-weight:800;color:#0a0a0a}
+body .back,body .top .logo,body .top button{color:#0a0a0a}
+body .back{font-size:24px}
 
 /* cards, lists */
-body .card{box-shadow:none;border:0;border-radius:16px}
-body .row,body .menu{background:#fff;padding:14px;border-bottom:1px solid #efeadb}
-body .av{background:#fbf3d5}
-body .tag{background:#fbf3d5;color:#7a5c00}
+body .card{box-shadow:0 2px 10px #a67c0014;border:1px solid #f0e6c2;border-radius:16px}
+body .row,body .menu{background:#fff;padding:14px;border-bottom:1px solid #f0e6c2}
+body .av{background:var(--gold-grad);color:#0a0a0a;font-weight:800}
+body .tag{background:var(--gold-t);color:#7a5c00}
 body .tag.w{background:#fff4dc;color:#9a6a00}
-body .ic{background:#0a0a0a;color:#d4af37}
-body .pos{color:#9a7b12}
+body .ic{background:var(--gold-grad);color:#0a0a0a;box-shadow:0 3px 8px #a67c0040}
+body .pos{color:#8a6d0b}
 
 /* buttons */
-body .btn{background:linear-gradient(90deg,#d4af37,#e6c458);color:#0a0a0a;box-shadow:none;border-radius:999px;height:54px;padding:0;font-size:17px;display:flex;align-items:center;justify-content:center}
-body .btn:hover{background:#c29d2b}
+body .btn{background:var(--gold-grad-h);color:#0a0a0a;box-shadow:0 4px 12px #a67c0040;border-radius:999px;height:54px;padding:0;font-size:17px;font-weight:800;display:flex;align-items:center;justify-content:center}
+body .btn:hover{filter:brightness(.95)}
 body .btn:disabled{opacity:.5}
-body .btn.alt{background:#0a0a0a;color:#d4af37;border:1.5px solid #d4af37}
+body .btn.alt{background:#0a0a0a;color:#e8c547;border:1.5px solid #d4a62a;box-shadow:none}
 body .btn.sm{height:auto;padding:8px 16px;font-size:13px;display:inline-block}
 
 /* form fields */
 body .field{display:block;margin:12px 0}
 body .field>span{display:block;font-size:13px;color:var(--mut);margin-bottom:6px}
-body .field>input,body .field>select{display:block;width:100%;height:50px;border:1.5px solid #e8e1cc;border-radius:12px;background:#fff;padding:0 14px;font-size:16px;color:var(--ink);outline:0}
-body .field>input:focus,body .field>select:focus,body .inp:focus-within{border-color:#d4af37}
-body .inp{border:1.5px solid #e8e1cc;border-radius:12px;padding:0 14px;margin-top:0}
+body .field>input,body .field>select{display:block;width:100%;height:50px;border:1.5px solid #eadfb8;border-radius:12px;background:#fff;padding:0 14px;font-size:16px;color:var(--ink);outline:0}
+body .field>input:focus,body .field>select:focus,body .inp:focus-within{border-color:#d4a62a;box-shadow:0 0 0 3px #d4a62a26}
+body .inp{border:1.5px solid #eadfb8;border-radius:12px;padding:0 14px;margin-top:0}
 body .inp input,body .inp select{padding:0;height:48px;font-size:16px}
 
 /* tabs, steps, nav */
-body .tabs{background:#fff;border-radius:999px;padding:4px}
-body .tabs button{border-radius:999px;color:var(--mut);font-weight:600}
-body .tabs .on{background:#0a0a0a;color:#d4af37;box-shadow:none}
-body .steps .s.on{background:#d4af37;color:#0a0a0a}
-body .steps .l.on{background:#d4af37}
-body .nav{background:#0a0a0a;border-top:1px solid #2a2415}
+body .tabs{background:#0a0a0a;border-radius:999px;padding:4px}
+body .tabs button{border-radius:999px;color:#b9ae85;font-weight:600}
+body .tabs .on{background:var(--gold-grad-h);color:#0a0a0a;box-shadow:none;font-weight:800}
+body .steps .s.on{background:var(--gold-grad);color:#0a0a0a}
+body .steps .l.on{background:#d4a62a}
+body .nav{background:#0a0a0a;border-top:2px solid #d4a62a}
 body .nav button{color:#8c8672}
-body .nav button.on,body .phone .nav button.on{color:#d4af37}
-body .up{background:#fff;border-color:#d4af37}
+body .nav button.on,body .phone .nav button.on{color:#f3d567}
+body .up{background:#fff;border-color:#d4a62a}
 
-/* hero surfaces */
-body .bal,body .mb-bal{background:linear-gradient(150deg,#0a0a0a,#1c1608 60%,#3a2d0a)}
-body .bal b,body .mb-bal b{color:#d4af37}
-body .pill{background:#d4af37;color:#0a0a0a}
-body .promo,body .mb-grow{background:linear-gradient(120deg,#0a0a0a,#3a2d0a)}
-body .welcome{background:radial-gradient(circle at 80% 10%,#3a2d0a 0,transparent 45%),linear-gradient(170deg,#0a0a0a,#14100a 70%,#2a2008)}
-body .welcome h1{color:#d4af37}
-body .welcome .top{background:none;position:static;padding:0;margin:0}
-body .welcome .btn{background:#d4af37;color:#0a0a0a}
-body .vcard{background:linear-gradient(135deg,#0a0a0a,#3a2d0a);border:1px solid #d4af37}
-body .fab{background:#d4af37;color:#0a0a0a;box-shadow:0 4px 14px #d4af3755}
+/* hero surfaces: metallic gold cards with black text */
+body .bal,body .mb-bal{background:var(--gold-grad);color:#0a0a0a;box-shadow:0 8px 22px #a67c0055}
+body .bal b,body .mb-bal b,body .bal small,body .mb-bal .lab{color:#0a0a0a}
+body .bal small{opacity:.75}
+body .eye,body .mb-bal .lab button{color:#0a0a0a}
+body .pill{background:#0a0a0a;color:#f3d567}
+body .mb-chip{background:rgba(10,10,10,.14);color:#0a0a0a}
+body .mb-acct{background:rgba(10,10,10,.12)}
+body .mb-bal:after{background:rgba(255,255,255,.18)}
+body .promo,body .mb-grow{background:var(--gold-grad);color:#0a0a0a;box-shadow:0 6px 16px #a67c0040}
+body .welcome{background:radial-gradient(circle at 80% 8%,#5a4410 0,transparent 48%),linear-gradient(170deg,#0a0a0a,#14100a 70%,#2a2008);color:#f5efd9}
+body .welcome h1{background:var(--gold-grad);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+body .welcome .logo{color:#e8c547}
+body .welcome .top{background:none;position:static;padding:0;margin:0;box-shadow:none}
+body .welcome .btn{background:var(--gold-grad-h);color:#0a0a0a}
+body .vcard{background:var(--gold-grad);color:#0a0a0a;box-shadow:0 8px 22px #a67c0055}
+body .fab{background:var(--gold-grad);color:#0a0a0a;box-shadow:0 4px 14px #a67c0066}
 
 /* home (MyBank) */
-body .mb{--b1:#0a0a0a;--b2:#2a2008;--bl:#8a6d0b}
-body .mb-tiles .c,body .mb-tx .l{background:#fbf3d5;color:#8a6d0b}
-body .mb-tiles .c.n{background:#f1efe8;color:#5a5546}
-body .mb-tiles button{border:0}
-body .mb-tiles button:hover{box-shadow:0 4px 12px rgba(212,175,55,.2)}
-body .mb-pill{background:#fbf3d5;border-color:#ecd98a}
-body .mb-av{background:#0a0a0a;color:#d4af37}
-body .mb-copy,body .mb-grow button{background:#d4af37;color:#0a0a0a}
+body .mb{--b1:#e8c547;--b2:#a67c00;--bl:#8a6d0b}
+body .mb-tiles .c,body .mb-tx .l{background:var(--gold-grad);color:#0a0a0a}
+body .mb-tiles .c.n{background:#efe9d3;color:#5a5546}
+body .mb-tiles button{border:1px solid #f0e6c2}
+body .mb-tiles button:hover{box-shadow:0 4px 12px rgba(212,166,42,.3)}
+body .mb-pill{background:var(--gold-t);border-color:#ecd98a}
+body .mb-av{background:var(--gold-grad);color:#0a0a0a;font-weight:800}
+body .mb-ib{background:#0a0a0a;color:#f3d567}
+body .mb-copy,body .mb-grow button{background:#0a0a0a;color:#f3d567}
 body .mb-link{color:#8a6d0b}
-body .mb-ac,body .mb-intl{border:0}
+body .mb-ac,body .mb-intl{border:1px solid #f0e6c2}
+body .mb-ac .f{background:var(--gold-t)}
 
 /* extra pages */
 body .hub a{background:#fff;color:var(--ink)}
-body .otp input{border-radius:12px;border:1.5px solid #e8e1cc}
-body .sw.on{background:#d4af37}
-body .bar i{background:#d4af37}
+body .otp input{border-radius:12px;border:1.5px solid #eadfb8}
+body .sw.on{background:#d4a62a}
+body .bar i{background:var(--gold-grad)}
 
 /* admin */
-body .side{background:linear-gradient(180deg,#0a0a0a,#1c1608)}
-body .side .on{background:#d4af37;color:#0a0a0a}
-body .qa button{background:#fbf3d5;color:#7a5c00}
-body svg path[stroke="#14a04f"]{stroke:#d4af37}
-body svg path[fill="#14a04f22"]{fill:#d4af3722}
+body .side{background:linear-gradient(180deg,#0a0a0a,#1c1608);border-right:2px solid #d4a62a}
+body .side .logo{color:#e8c547}
+body .side .on{background:var(--gold-grad-h);color:#0a0a0a;font-weight:700}
+body .qa button{background:var(--gold-t);color:#7a5c00}
+body .stats .card b{color:#0a0a0a}
+body svg path[stroke="#14a04f"]{stroke:#d4a62a}
+body svg path[fill="#14a04f22"]{fill:#d4a62a22}
 
-/* OPay-style pages (transfer, accounts, settings, auth) */
-body .ot,body .op{--g:#d4af37;--gd:#b8941f}
-body .ot-btn{color:#0a0a0a}
-body .ot-alt{background:#fff;color:#8a6d0b;border-color:#d4af37}
-body .ot-check{color:#0a0a0a}
-body .ot-name.ok{background:#fbf3d5;color:#7a5c00}
-body .ot-chips button,body .ot-ic,body .ot-alt:hover,body .ot-pad button:active{background:#fbf3d5}
+/* OPay-style pages (transfer, accounts, settings) */
+body .ot,body .op{--g:#d4a62a;--gd:#a67c00}
+body .ot{background:#f7f3e6}
+body .ot-head button{color:#0a0a0a}
+body .ot-btn{background:var(--gold-grad-h);color:#0a0a0a;box-shadow:0 4px 12px #a67c0040}
+body .ot-alt{background:#fff;color:#8a6d0b;border-color:#d4a62a;box-shadow:none}
+body .ot-check{background:var(--gold-grad);color:#0a0a0a}
+body .ot-name.ok{background:var(--gold-t);color:#7a5c00}
+body .ot-chips button,body .ot-ic,body .ot-alt:hover,body .ot-pad button:active{background:var(--gold-t)}
 body .ot-chips button,body .ot-ic{color:#7a5c00}
-body .wl-flag,body .wl-toast{background:#fbf3d5}
+body .ot-input:focus{box-shadow:0 0 0 3px #d4a62a26}
+body .wl-flag,body .wl-toast{background:var(--gold-t)}
 body .wl-toast{color:#7a5c00}
 body .wl-acct.sel{background:#fdf8e6}
 body .wl-copy,body .wl-acts button,body .wl-acts a{color:#8a6d0b}
-body .wl-acts .fill{color:#0a0a0a}
-body .st-av,body .st-tag,body .st-toast,body .st-grid i{background:#fbf3d5;color:#7a5c00}
-body .st-tier.done .n{color:#0a0a0a}
+body .wl-acts .fill{background:var(--gold-grad-h);color:#0a0a0a}
+body .st-av{background:var(--gold-grad);color:#0a0a0a}
+body .st-tag,body .st-toast,body .st-grid i{background:var(--gold-t);color:#7a5c00}
+body .st-sw.on{background:#d4a62a}
+body .st-tier.done .n{background:var(--gold-grad);color:#0a0a0a}
+body .st-steps i.on{background:#d4a62a}
+
+/* login / signup / forgot: black screen, gold everything */
+body .op{background:radial-gradient(circle at 85% 0,#3a2d0a 0,transparent 45%),#0a0a0a;color:#f5efd9}
+body .op-logo{color:#e8c547}
+body .op-logo span{background:var(--gold-grad);color:#0a0a0a}
+body .op h1{background:var(--gold-grad);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+body .op-sub,body .op-field>span,body .op-check,body .op-foot{color:#a89e7c}
+body .op-in{background:#17140c;border-color:#3a2f10}
+body .op-in:focus-within{border-color:#d4a62a;background:#1d180c;box-shadow:0 0 0 3px #d4a62a26}
+body .op-in input{color:#f5efd9}
+body .op-in input::placeholder{color:#6f6748}
+body .op-in button,body .op-link,body .op-foot a{color:#e8c547}
+body .op-btn{background:var(--gold-grad-h);color:#0a0a0a;box-shadow:0 4px 14px #a67c0055}
+body .op-btn:hover{filter:brightness(.95)}
+body .op-check input{accent-color:#d4a62a}
+body .op-err{color:#ff8a7a}
